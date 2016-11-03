@@ -1,16 +1,13 @@
 import re, os, csv, copy
+import preprocess
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.porter import PorterStemmer
-from stop_words import get_stop_words
-from gensim import corpora, models
-import gensim
-import preprocess
-
+# from stop_words import get_stop_words
+# from gensim import corpora, models
+# import gensim
 from textblob import TextBlob
 from textblob.sentiments import NaiveBayesAnalyzer
 
-from collections import namedtuple
-from urllib.request import urlopen
 
 class TwitchChatLogParser:
 
@@ -142,7 +139,7 @@ class TwitchChatLogParser:
 	def get_cleaned_utterances(self):
 		return self.utterances
 
-	def update_emotes(self, emo):
+	def update_emotes_list(self, emo):
 		if type(emo) == 'list':
 			for e in emo:
 				self.emotes.append(e)
@@ -186,24 +183,6 @@ class TopicParser:
 		split_text = text.split()
 		doc_bow = self.dictionary.doc2bow(split_text)
 		text_lda = self.model[doc_bow]
-
-
-
-# # FIXME: using 'for' to traverse every log file in LOG_DIR
-# # fn = 'test.log'
-# log_file = open(os.path.join(LOG_DIR, fn))
-# 
-# en_stop = get_stop_words('en')
-# p_stemmer = PorterStemmer()
-
-# # utterance classify
-# command_utterance = []
-
-
-
-# print(corpus)
-# print('############'*5)
-# print(texts)
 
 
 # # dictionary = corpora.Dictionary(texts)
