@@ -48,6 +48,7 @@ class TwitchChatLogParser:
 
 	def _parsing(self):
 		set_ref_time = 0
+		i = 0
 		for line in self.corpus:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
 			match = re.match(r'\[(\d+):(\d+):(\d+)\]\s<(([\+|%|@|\^|~]+)?(\w+))>\s(.*)', line)
@@ -58,9 +59,9 @@ class TwitchChatLogParser:
 				self.user_lists.append(match.group(4))
 				self.time.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.ref_time)
 				self.utterances.append([match.group(7)])
+				self._content_check(match.group(7), i)
+				i = i + 1
 		
-		for i in range(len(self.user_lists)):
-			self._content_check(self.utterances[i][0], i)
 	
 	def clean_up(self):
 		# NOTE: Only deal with english utterance right now
@@ -85,13 +86,13 @@ class TwitchChatLogParser:
 
 	# 1: Conversation, 2: Question, 3: Subscriber, 4: ToUser, 5: Emote, 6:Command
 	def _content_check(self, text, i): # utterance is a list
-		# Command
-		if text[0] == '!':
+		# Command  
+		if text[0] == '!' or '^' in self.user_lists[i]:
 			return self.utterances[i].append(6)
-			
+
 		# Emote
 		for word in text.split():
-			if word in self.emotes:
+			if word.lower() in self.emotes:
 				return self.utterances[i].append(5)
 				
 			# To user    e.g. @reckful How are you doing?
@@ -99,13 +100,8 @@ class TwitchChatLogParser:
 				return self.utterances[i].append(4)
 		
 			# Question
-			if word in self.inquery:
+			if word.lower() in self.inquery:
 				return self.utterances[i].append(2)
-		
-		# Question
-		# FIX: find a better way to determine if a sentence is a question
-		if text[-1] == '?':
-			return self.utterances[i].append(2)
 			
 		# Subscriber
 		if '%' in self.user_lists[i]:
@@ -127,6 +123,7 @@ class TwitchChatLogParser:
 		else:
 			fn = 'logAnalysis.csv'
 
+		# Write to csv file 
 		with open(fn, 'w') as csvfile:
 		    fieldnames = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
 		    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
