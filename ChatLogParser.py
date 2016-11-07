@@ -2,11 +2,6 @@ import re, os, csv, copy
 import preprocess
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.porter import PorterStemmer
-# from stop_words import get_stop_words
-# from gensim import corpora, models
-# import gensim
-from textblob import TextBlob
-from textblob.sentiments import NaiveBayesAnalyzer
 
 
 class TwitchChatLogParser:
@@ -62,28 +57,29 @@ class TwitchChatLogParser:
 				self._content_check(match.group(7), i)
 				i = i + 1
 		
-	
-	def clean_up(self):
+	def clean_up(self, str):
 		# NOTE: Only deal with english utterance right now
-		for utterance in self.utterances:
-			str = utterance[0]
-			if preprocess.check_lang(str) == 'en':
-				str = preprocess.remove_stops(str)
-				
-				str = preprocess.remove_features(str)
-				# Tagging.  TODO: make a twitch emotes tagging and remove them?
-				str = preprocess.tag_and_remove(str)
-				# lemmatization
-				str = preprocess.lemmatize(str)
-				
-				# Tokenization
-				tokenizer = RegexpTokenizer(r'\w+')
-				tokens = tokenizer.tokenize(str)
-				
-				# stemming
-				p_stemmer = PorterStemmer()
-				self.texts.append([p_stemmer.stem(i) for i in tokens])
+		if preprocess.check_lang(str) == 'en':
+			str = preprocess.remove_stops(str)
+			
+			str = preprocess.remove_features(str)
+			# Tagging.  TODO: make a twitch emotes tagging and remove them?
+			str = preprocess.tag_and_remove(str)
+			# lemmatization
+			str = preprocess.lemmatize(str)
+			
+			# Tokenization
+			tokenizer = RegexpTokenizer(r'\w+')
+			tokens = tokenizer.tokenize(str)
+			
+			# stemming
+			p_stemmer = PorterStemmer()
+			self.texts.append([p_stemmer.stem(i) for i in tokens])
 
+			return str
+
+		return ''
+		
 	# 1: Conversation, 2: Question, 3: Subscriber, 4: ToUser, 5: Emote, 6:Command
 	def _content_check(self, text, i): # utterance is a list
 		# Command  
@@ -130,8 +126,13 @@ class TwitchChatLogParser:
 		    writer.writeheader()
 
 		    for i in range(len(self.user_lists)):
-		    	data = {'time': str(self.time[i]), 'topic': '', 'related': '', 'emotion': '', 'content': str(self.utterances[i][1]), 'comment': self.utterances[i][0]}
-		    	writer.writerow(data)
+		    	writer.writerow({'time': str(self.time[i]), 
+		    					 'topic': '', 
+		    					 'related': '', 
+		    					 'emotion': '', 
+		    					 'content': str(self.utterances[i][1]), 
+		    					 'comment': self.utterances[i][0]
+		    					 })
 	
 	def get_cleaned_utterances(self):
 		return self.utterances
@@ -142,44 +143,6 @@ class TwitchChatLogParser:
 				self.emotes.append(e)
 		else:
 			self.emotes.append(emo)
-
-
-class SentimentAnalyzer():
-	def __init__(self):
-		self.labeled_data = []
-
-	def sentiment_analysis(self, data):
-		f = open("tidesoftime1.csv", "w")
-		c = csv.writer(f)
-		c.writerow(['text', 'emotion'])
-		for d in data[:50]:
-			blob = TextBlob(d, analyzer=NaiveBayesAnalyzer())
-			self.labeled_data.append((d, blob.sentiment.classification))
-			print("Write: ", [d, blob.sentiment.classification])
-			c.writerow([d, blob.sentiment.classification])
-		f.close()
-		return self.labeled_data
-
-	def show(self):
-		for d in self.labeled_data:
-			print(d)
-
-
-class TopicParser:
-	def __init__(self, training_data, num_topics: int):
-		self.dictionary = corpora.Dictionary(training_data)
-		corpus = [self.dictionary.doc2bow(text) for text in training_data]
-		self.model = gensim.models.ldamodel.LdaModel(corpus,
-		                                             num_topics=num_topics,
-		                                             id2word=self.dictionary,
-		                                             passes=20)
-
-	def parse(self, text):
-		# You can then infer topic distributions on new, unseen documents 
-		# text needs to be a bow format
-		split_text = text.split()
-		doc_bow = self.dictionary.doc2bow(split_text)
-		text_lda = self.model[doc_bow]
 
 
 # # dictionary = corpora.Dictionary(texts)
