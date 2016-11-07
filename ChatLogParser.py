@@ -1,7 +1,5 @@
 import re, os, csv, copy
 import preprocess
-from nltk.tokenize import RegexpTokenizer
-from nltk.stem.porter import PorterStemmer
 
 
 class TwitchChatLogParser:
@@ -69,12 +67,12 @@ class TwitchChatLogParser:
 			str = preprocess.lemmatize(str)
 			
 			# Tokenization
-			tokenizer = RegexpTokenizer(r'\w+')
-			tokens = tokenizer.tokenize(str)
+			# tokenizer = RegexpTokenizer(r'\w+')
+			# tokens = tokenizer.tokenize(str)
 			
-			# stemming
-			p_stemmer = PorterStemmer()
-			self.texts.append([p_stemmer.stem(i) for i in tokens])
+			# # stemming
+			# p_stemmer = PorterStemmer()
+			# self.texts.append([p_stemmer.stem(i) for i in tokens]) # self.texts ()
 
 			return str
 
@@ -106,10 +104,10 @@ class TwitchChatLogParser:
 		# Conversation
 		return self.utterances[i].append(1)
 
-	def emotion_pics_related(self, sentence):
+	def emo_pics_related(self, text):
 		# Determine if a sentence has twitch emote pics
 		for word in text.split():
-			if word in self.emotes:
+			if word.lower() in self.emotes:
 				return True
 		return False
 
