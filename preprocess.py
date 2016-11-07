@@ -49,7 +49,7 @@ def remove_stops(str):
 # Reduces Dimensionality, gets rid of a lot of unique urls
 def remove_features(data_str):
     # compile regex
-    url_re = re.compile('https?://(www.)?\w+\.\w+(/\w+)*/?')
+    url_re = re.compile('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
     punc_re = re.compile('[%s]' % re.escape(string.punctuation))
     num_re = re.compile('(\\d+)')
     mention_re = re.compile('@(\w+)')

@@ -1,6 +1,7 @@
 from ChatLogParser import TwitchChatLogParser
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.porter import PorterStemmer
+from TopicParser2 import TopicParser
 
 # Read the all emotes (global and subsrciber) 
 emotes = []
@@ -16,9 +17,20 @@ textparser = TwitchChatLogParser(emotes=emotes, log_dir=LOG_DIR)
 textparser.update_emotes_list(robot_emotes)
 corpus = textparser.read_log_from_dir(LOG_DIR)
 
-cleaned_str = []
-for utterance in textparser.utterances:
-	cleaned_str.append(textparser.clean_up(utterance[0]))
+training_data = []
+for text in textparser.utterances:
+    s = textparser.clean_up(text[0])
+    if s and not textparser.emo_pics_related(s):
+        training_data.append(s)
+
+topicparser = TopicParser(training_data=training_data, topic_numbers=20)
+topicparser.parser()
+
+for i in range(10):
+	topicparser.show_ith_topic_model(i)
+
+print("-------"*3)
+topicparser.show_topics_top_words(5)
 
 # Tokenization
 # texts = []
