@@ -1,7 +1,6 @@
 from langid.langid import LanguageIdentifier, model
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.corpus import stopwords
 from nltk import pos_tag
 from stop_words import get_stop_words
 import string
@@ -43,7 +42,6 @@ def remove_stops(str):
                 cleaned_str = cleaned_str + ' ' + word
             list_pos += 1
     return cleaned_str
-
 
 # catch-all to remove other 'words' that I felt didn't add a lot of value
 # Reduces Dimensionality, gets rid of a lot of unique urls

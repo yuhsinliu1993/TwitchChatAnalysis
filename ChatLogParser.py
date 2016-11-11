@@ -1,48 +1,55 @@
 import re, os, csv, copy
 import preprocess
+from textblob import TextBlob, Word
+from textblob.sentiments import NaiveBayesAnalyzer
 
 
 class TwitchChatLogParser:
 
 	inquery = ['what', 'what\'s', 'why', 'how', 'whether', 'when', 'where', 'which', 'who'] 
 
-	def __init__(self, emotes=None, log_dir=None):
-		self.corpus = []
+	def __init__(self, spell_check=False):
+		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
+		self.data = []			
+		# [["SMOrc I like to hit face too", (content), (topic), (related), (sentiment)], [...], ...]
 		self.utterances = []
 		self.user_lists = []
-		self.texts = []
 		self.time = []
+		self.texts = []
 		self.emotes = []
-		self.LOG_DIR = log_dir
 		self.ref_time = 0
+		self.spell_check = spell_check
 
-		if emotes:
-			self.emotes = copy.copy(emotes)
-		
 	def read_log_from_dir(self, dir_path):
 		for fn in os.listdir(dir_path):
 			if os.path.splitext(fn)[1] == '.log':
 				with open(os.path.join(dir_path, fn), "r") as f:
 					for line in f:
-						self.corpus.append(line)
-		self._parsing()
-		return self.corpus
+						self.data.append(line)
+		return self.data
 
 	def read_from_file(self, file_name):
 		try:
 			with open(file_name, "r") as f:
 				for line in f:
-					self.corpus.append(line)
-
-			self._parsing()
-			return self.corpus
+					self.data.append(line)
+			return self.data
 		except Exception as e:
 			print(str(e))
 
-	def _parsing(self):
+	def read_emotes_file(self, file_path):
+		try:
+			with open(file_path, 'r') as f:
+			    emo = f.readline()
+			    for e in emo.split(','):
+			        self.emotes.append(e.split('\'')[1].lower())
+		except Exception as e:
+			print(str(e))
+
+	def parsing(self):
 		set_ref_time = 0
 		i = 0
-		for line in self.corpus:
+		for line in self.data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
 			match = re.match(r'\[(\d+):(\d+):(\d+)\]\s<(([\+|%|@|\^|~]+)?(\w+))>\s(.*)', line)
 			if match:
@@ -51,34 +58,21 @@ class TwitchChatLogParser:
 					set_ref_time = 1
 				self.user_lists.append(match.group(4))
 				self.time.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.ref_time)
-				self.utterances.append([match.group(7)])
+				if self.spell_check:
+					u = []
+					for w in match.group(7).split():
+						result = Word(w).spellcheck()
+						if result[0][1] >= 0.8:
+							w = result[0][0]
+						u.append(w)
+					utterance = " ".join(u)
+					self.utterances.append([utterance])
+				else:	
+					self.utterances.append([match.group(7)])
 				self._content_check(match.group(7), i)
 				i = i + 1
-		
-	def clean_up(self, str):
-		# NOTE: Only deal with english utterance right now
-		if preprocess.check_lang(str) == 'en':
-			str = preprocess.remove_stops(str)
 			
-			str = preprocess.remove_features(str)
-			# Tagging.  TODO: make a twitch emotes tagging and remove them?
-			str = preprocess.tag_and_remove(str)
-			# lemmatization
-			str = preprocess.lemmatize(str)
-			
-			# Tokenization
-			# tokenizer = RegexpTokenizer(r'\w+')
-			# tokens = tokenizer.tokenize(str)
-			
-			# # stemming
-			# p_stemmer = PorterStemmer()
-			# self.texts.append([p_stemmer.stem(i) for i in tokens]) # self.texts ()
-
-			return str
-
-		return ''
-		
-	# 1: Conversation, 2: Question, 3: Subscriber, 4: ToUser, 5: Emote, 6:Command
+	# 1: Conversation, 2: Question, 3: Streamer+Subscriber+Mod, 4: ToUser, 5: Emote, 6:Command
 	def _content_check(self, text, i): # utterance is a list
 		# Command  
 		if text[0] == '!' or '^' in self.user_lists[i]:
@@ -98,11 +92,28 @@ class TwitchChatLogParser:
 				return self.utterances[i].append(2)
 			
 		# Subscriber
-		if '%' in self.user_lists[i]:
+		if '%' in self.user_lists[i] or '@' in self.user_lists[i] or '~' in self.user_lists[i]:
 			return self.utterances[i].append(3)
 			
 		# Conversation
 		return self.utterances[i].append(1)
+
+	def clean_up(self, str):
+		# NOTE: Only deal with english utterance right now
+		if preprocess.check_lang(str) == 'en':
+			str = preprocess.remove_stops(str)
+			str = preprocess.remove_features(str)
+			# Tagging.  TODO: make a twitch emotes tagging and remove them?
+			str = preprocess.tag_and_remove(str)
+			# lemmatization
+			str = preprocess.lemmatize(str)
+			return str
+		return ''
+
+	# Sentiment Analysis by using TextBlob
+	def _sentiment_analysis(self, d, i):
+		blob = TextBlob(d, analyzer=NaiveBayesAnalyzer())
+		self.utterances[i].append(blob.sentiment.classification)
 
 	def emo_pics_related(self, text):
 		# Determine if a sentence has twitch emote pics
@@ -141,6 +152,8 @@ class TwitchChatLogParser:
 				self.emotes.append(e)
 		else:
 			self.emotes.append(emo)
+
+
 
 
 # # dictionary = corpora.Dictionary(texts)

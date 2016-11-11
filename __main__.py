@@ -1,45 +1,49 @@
 from ChatLogParser import TwitchChatLogParser
-from nltk.tokenize import RegexpTokenizer
-from nltk.stem.porter import PorterStemmer
-from TopicParser2 import TopicParser
+from TopicModeling import TopicModeling
 
-# Read the all emotes (global and subsrciber) 
-emotes = []
-with open('emotes', 'r') as f:
-    emo = f.readline()
-    for e in emo.split(','):
-        emotes.append(e.split('\'')[1].lower())
-robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", "LUL", "lul"]
-
+# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 LOG_DIR = "/Users/Michaeliu/Twitch/logfile"
-textparser = TwitchChatLogParser(emotes=emotes, log_dir=LOG_DIR)
-# Update the emote list with robot emotes
-textparser.update_emotes_list(robot_emotes)
-corpus = textparser.read_log_from_dir(LOG_DIR)
+DIR = "/Users/Michaeliu/Twitch/"
+text_parser = TwitchChatLogParser(spell_check=True)
+text_parser.read_emotes_file(DIR+"emotes")
 
+# [PROBLEM] how about emoji emote ?
+robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", "LUL", "lul"]
+text_parser.update_emotes_list(robot_emotes)
+# emoji_emotes = ["👻", "🇷",  "🇪", "🇰", "🇹", "🎶", "🛠", "🤔", "👌", "🙂"]
+logs = text_parser.read_log_from_dir(LOG_DIR)
+text_parser.parsing() # "user_list", "utterance", "content", "time" are done
+
+
+# ==== Clean up the data ====
 training_data = []
+emo_data = []
+all_data = []
 for text in textparser.utterances:
     s = textparser.clean_up(text[0])
-    if s and not textparser.emo_pics_related(s):
-        training_data.append(s)
+    if s:
+        if textparser.emo_pics_related(s):
+            emo_data.append(s)
+        else:
+            training_data.append(s)
+    all_data.append(s)
 
-topicparser = TopicParser(training_data=training_data, topic_numbers=20)
-topicparser.parser()
 
-for i in range(10):
-	topicparser.show_ith_topic_model(i)
+# ==== topic parser ====
+topic_parser = TopicModeling(data=all_data)
+topic_parser.tokenization()
+topic_parser.clean_up_tokens()
+dictionary = topic_parser.get_dictionary()
+corpus = [dictionary.doc2bow(doc) for doc in documents]
+lda = topic_parser.lda_model(corpus=corpus, id2word=dictionary, num_topics=20)
 
-print("-------"*3)
-topicparser.show_topics_top_words(5)
+# Assigns the topics to the documents in corpus
+lda_corpus = lda[corpus]
+from itertools import chain
+scores = list(chain(*[[score for topic_id,score in topic] \
+                      for topic in [doc for doc in lda_corpus]]))
+threshold = sum(scores)/len(scores)
 
-# Tokenization
-# texts = []
-# tokenizer = RegexpTokenizer(r'\w+')
-# p_stemmer = PorterStemmer()
-# for s in cleaned_str:
-# 	tokens = tokenizer.tokenize(s)		
-# 	# stemming
-# 	texts.append([p_stemmer.stem(i) for i in tokens])
 
 
 
