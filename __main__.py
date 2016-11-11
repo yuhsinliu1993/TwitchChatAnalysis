@@ -34,8 +34,8 @@ topic_parser = TopicModeling(data=all_data)
 topic_parser.tokenization()
 topic_parser.clean_up_tokens()
 dictionary = topic_parser.get_dictionary()
-corpus = [dictionary.doc2bow(doc) for doc in documents]
-lda = topic_parser.lda_model(corpus=corpus, id2word=dictionary, num_topics=20)
+corpus = topic_parser.get_corpus(dictionary)
+lda = topic_parser.lda_model(corpus=corpus, dictionary=dictionary, num_topics=20)
 
 # Assigns the topics to the documents in corpus
 lda_corpus = lda[corpus]

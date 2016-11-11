@@ -1,8 +1,11 @@
 import copy, nltk, re
 from string import digits
+from nltk.stem.snowball import SnowballStemmer
 from collections import defaultdict
 
 class TopicModeling:
+
+	stemmer = SnowballStemmer("english")
 
 	def __init__(self, data):
 		self.data = copy.copy(data)
@@ -54,7 +57,7 @@ class TopicModeling:
 				token_frequency[token] += 1
 
 		# keep words that occur more than once
-		self.documents = [[token for token in doc if token_frequency[token] > 1]  for doc in documents]
+		self.documents = [[token for token in doc if token_frequency[token] > 1]  for doc in tmp_docs]
    
 		for doc in self.documents:
 			doc.sort()
@@ -65,7 +68,10 @@ class TopicModeling:
 		dictionary.compactify()
 		return dictionary
 
-	def lda_model(self, corpus, id2word, num_topics):
+	def get_corpus(self, dictionary):
+		return [dictionary.doc2bow(doc) for doc in self.documents]
+
+	def lda_model(self, corpus, dictionary, num_topics):
 		from gensim.models import LdaModel
 		return LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, alpha=0.01, passes=20, minimum_probability=0)
 
