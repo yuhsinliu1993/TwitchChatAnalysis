@@ -136,9 +136,9 @@ class TwitchChatLogParser:
 
 		    for i in range(len(self.user_lists)):
 		    	writer.writerow({'time': str(self.time[i]), 
-		    					 'topic': '', 
+		    					 'topic': str(self.utterances[i][2]),
 		    					 'related': '', 
-		    					 'emotion': '', 
+		    					 'emotion': '',
 		    					 'content': str(self.utterances[i][1]), 
 		    					 'comment': self.utterances[i][0]
 		    					 })
@@ -153,8 +153,9 @@ class TwitchChatLogParser:
 		else:
 			self.emotes.append(emo)
 
-
-
+	def assign_topic(self, topic_num, index):
+		self.utterances[index].append(topic_num)
+		return self.utterances[index]
 
 # # dictionary = corpora.Dictionary(texts)
 # # corpus = [dictionary.doc2bow(text) for text in texts]

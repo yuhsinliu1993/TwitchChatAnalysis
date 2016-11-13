@@ -1,5 +1,5 @@
 from ChatLogParser import TwitchChatLogParser
-from TopicModeling import TopicModeling
+from TopicModeling import LDAModeling
 
 # ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 LOG_DIR = "/Users/Michaeliu/Twitch/logfile"
@@ -30,20 +30,14 @@ for text in textparser.utterances:
 
 
 # ==== topic parser ====
-topic_parser = TopicModeling(data=all_data)
-topic_parser.tokenization()
-topic_parser.clean_up_tokens()
-dictionary = topic_parser.get_dictionary()
-corpus = topic_parser.get_corpus(dictionary)
-lda = topic_parser.lda_model(corpus=corpus, dictionary=dictionary, num_topics=20)
+topic_parser = LDAModeling(data=all_data)
+documents = topic_parser.tokenization()
+topic_parser.build_lda_model(num_topics=20, alpha=0.01, passes=20)
 
-# Assigns the topics to the documents in corpus
-lda_corpus = lda[corpus]
-from itertools import chain
-scores = list(chain(*[[score for topic_id,score in topic] \
-                      for topic in [doc for doc in lda_corpus]]))
-threshold = sum(scores)/len(scores)
-
+# Assign topic for each utterance
+for i in range(len(all_data)):
+    topic, probability = topic_parser.get_data_topic(all_data[i])
+    text = textparser.assign_topic(topic, i)
 
 
 
