@@ -32,9 +32,8 @@ def remove_stops(str):
     cleaned_str = ''
     text = str.split()
     # text = tokenizer.tokenize(str)
-
     for word in text:
-        if word not in en_stop:
+        if word.lower() not in en_stop:
             # rebuild cleaned_str
             if list_pos == 0:
                 cleaned_str = word
