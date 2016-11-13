@@ -19,10 +19,10 @@ text_parser.parsing() # "user_list", "utterance", "content", "time" are done
 training_data = []
 emo_data = []
 all_data = []
-for text in textparser.utterances:
-    s = textparser.clean_up(text[0])
+for text in text_parser.utterances:
+    s = text_parser.clean_up(text[0])
     if s:
-        if textparser.emo_pics_related(s):
+        if text_parser.emo_pics_related(s):
             emo_data.append(s)
         else:
             training_data.append(s)
@@ -37,7 +37,7 @@ topic_parser.build_lda_model(num_topics=20, alpha=0.01, passes=20)
 # Assign topic for each utterance
 for i in range(len(all_data)):
     topic, probability = topic_parser.get_data_topic(all_data[i])
-    text = textparser.assign_topic(topic, i)
+    text = text_parser.assign_topic(topic, i)
 
 
 
