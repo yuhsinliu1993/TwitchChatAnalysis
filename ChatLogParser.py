@@ -11,7 +11,7 @@ class TwitchChatLogParser:
 	def __init__(self, spell_check=False):
 		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
 		self.data = []			
-		# [["SMOrc I like to hit face too", (content), (topic), (related), (sentiment)], [...], ...]
+		# [[(utterance), (content), (topic), (related), (sentiment)], [...], ...]
 		self.utterances = []
 		self.user_lists = []
 		self.time = []
@@ -115,12 +115,23 @@ class TwitchChatLogParser:
 		blob = TextBlob(d, analyzer=NaiveBayesAnalyzer())
 		self.utterances[i].append(blob.sentiment.classification)
 
-	def emo_pics_related(self, text):
-		# Determine if a sentence has twitch emote pics
+	# Do emo_related_check after clean_up the text 
+	def emo_related_check(self, text): 
+		# Determine if a sentence has twitch emote pics 
+		# 0: no emote  1: emo related  2: only emo in the text
+		emo_related = 0
+		t = 0
 		for word in text.split():
 			if word.lower() in self.emotes:
-				return True
-		return False
+				emo_related = 1
+			else:
+				t = 1
+		if t:
+			if emo_related:
+				return 1
+			else:
+				return 0
+		return 2
 
 	def write_to_csv(self, filename=None):
 		if filename:
@@ -142,9 +153,6 @@ class TwitchChatLogParser:
 		    					 'content': str(self.utterances[i][1]), 
 		    					 'comment': self.utterances[i][0]
 		    					 })
-	
-	def get_cleaned_utterances(self):
-		return self.utterances
 
 	def update_emotes_list(self, emo):
 		if type(emo) == 'list':
@@ -153,9 +161,16 @@ class TwitchChatLogParser:
 		else:
 			self.emotes.append(emo)
 
-	def assign_topic(self, topic_num, index):
-		self.utterances[index].append(topic_num)
+	def assign_topic(self, topic, index):
+		self.utterances[index].append(topic)
 		return self.utterances[index]
+
+	def show_all_utterance_with_topic(self, topic_no):
+		for i in range(len(self.utterances)):
+			if self.utterances[i][2] == topic_no:
+				print(self.utterances[i][0])
+
+
 
 # # dictionary = corpora.Dictionary(texts)
 # # corpus = [dictionary.doc2bow(text) for text in texts]

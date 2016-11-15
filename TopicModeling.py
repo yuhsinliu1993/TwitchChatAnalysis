@@ -14,7 +14,7 @@ class LDAModeling:
 		self.data = copy.copy(data)
 		self.totalvocab_stemmed = []
 		self.totalvocab_tokenized = []
-		self.documents = [] 	# cleaned tokens
+		self._documents = [] 	# cleaned tokens
 		self._corpus = []
 		self._dictionary = []
 		self.lda_model = None
@@ -32,7 +32,7 @@ class LDAModeling:
 		
 		self._clean_up_tokens()
 		
-		return self.documents
+		return self._documents
 
 	def _tokenize_and_stem(self, text):
 		# [ADD] remove unigrams
@@ -70,27 +70,30 @@ class LDAModeling:
 				token_frequency[token] += 1
 
 		# keep words that occur more than once
-		self.documents = [[token for token in doc if token_frequency[token] > 1]  for doc in tmp_docs]
+		self._documents = [[token for token in doc if token_frequency[token] > 1]  for doc in tmp_docs]
    
-		for doc in self.documents:
+		for doc in self._documents:
 			doc.sort()
 
 	def build_lda_model(self, num_topics, alpha, passes):
 		self.num_topics = num_topics
-		self._dictionary = corpora.Dictionary(self.documents)
+		self._dictionary = corpora.Dictionary(self._documents)
 		# assign new word ids to all words. This is done to make the ids more compact
 		self._dictionary.compactify()
-		self._corpus = [self._dictionary.doc2bow(doc) for doc in self.documents]
-		corpora.MmCorpus.serialize('test1.mm', self._corpus)
+		self._corpus = [self._dictionary.doc2bow(doc) for doc in self._documents]
 		self.lda_model = LdaModel(corpus=self._corpus, id2word=self._dictionary, num_topics=self.num_topics, alpha=alpha, passes=passes, minimum_probability=0)
+		return self.lda_model
 
 	def get_data_topic(self, query):
 		query = self._dictionary.doc2bow(query.split())
-		tmp = list(sorted(self.lda_model[query], key=lambda x: x[1]))
-		return tmp[-1]
-		
+		topic, probability = list(sorted(self.lda_model[query], key=lambda x: x[1]))[-1]
+		return topic
+
+	def print_topic(self, topic_no, top_n=5):
+		self.lda_model.print_topic(topic_no, top_n)
+
 	# def lda_topics_clustering(self, lda_model):
-	# 	# Assigns the topics to the documents in corpus
+	# 	# Assigns the topics to the _documents in corpus
 	# 	lda_corpus = lda_model[self._corpus]
 	# 	scores = list(chain(*[[score for topic_id, score in topic] for topic in [doc for doc in lda_corpus]]))
 	# 	self._threshold = sum(scores)/len(scores)
