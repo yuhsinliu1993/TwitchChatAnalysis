@@ -147,7 +147,7 @@ class TwitchChatLogParser:
 
 		    for i in range(len(self.user_lists)):
 		    	writer.writerow({'time': str(self.time[i]), 
-		    					 'topic': str(self.utterances[i][2]),
+		    					 'topic': str(self.utterances[i][2] + 1),
 		    					 'related': '', 
 		    					 'emotion': '',
 		    					 'content': str(self.utterances[i][1]), 

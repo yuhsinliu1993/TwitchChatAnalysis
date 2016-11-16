@@ -60,7 +60,6 @@ class LDAModeling:
 
 	def _clean_up_tokens(self):
 		token_frequency = defaultdict(int)
-		
 		# removes numbers only words
 		tmp_docs = [[token for token in doc if len(token.strip(digits)) == len(token)] for doc in self.totalvocab_tokenized]
 
@@ -91,6 +90,15 @@ class LDAModeling:
 
 	def print_topic(self, topic_no, top_n=5):
 		self.lda_model.print_topic(topic_no, top_n)
+
+	def save_topics(self, filename):
+		with open(filename, "w") as f:
+			for i in range(self.num_topics):
+				s = topic_parser.lda_model.print_topic(i, topn=5)
+				result = ""
+				for t in s.split('+'):
+					result += t.strip().split('*')[1] + " "
+				f.write(result.rstrip()+"\n")
 
 	# def lda_topics_clustering(self, lda_model):
 	# 	# Assigns the topics to the _documents in corpus

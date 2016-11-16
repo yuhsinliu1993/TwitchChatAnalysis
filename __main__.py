@@ -14,7 +14,6 @@ text_parser.update_emotes_list(robot_emotes)
 logs = text_parser.read_log_from_dir(LOG_DIR)
 text_parser.parsing() # "user_list", "utterance", "content", "time" are done
 
-
 # ==== Clean up the data ====
 training_data = []
 emo_only_data = []
@@ -54,6 +53,9 @@ for i in range(len(all_cleaned_data)):
 	else:
     	topic = topic_parser.get_data_topic(all_cleaned_data[i])
     	text = text_parser.assign_topic(topic, i)
+
+topic_parser.save_topics("topic.txt")
+
 
 
 
