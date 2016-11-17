@@ -4,11 +4,11 @@ from textblob import TextBlob, Word
 from textblob.sentiments import NaiveBayesAnalyzer
 
 
-class TwitchChatLogParser:
+class TwitchChatParser:
 
 	inquery = ['what', 'what\'s', 'why', 'how', 'whether', 'when', 'where', 'which', 'who'] 
 
-	def __init__(self, spell_check=False):
+	def __init__(self, spell_check=False, dir_path=None, filename=None, streamer):
 		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
 		self.data = []			
 		# [[(utterance), (content), (topic), (related), (sentiment)], [...], ...]
@@ -19,36 +19,36 @@ class TwitchChatLogParser:
 		self.emotes = []
 		self.ref_time = 0
 		self.spell_check = spell_check
+		self.streamer = streamer
 
-	def read_log_from_dir(self, dir_path):
+		if dir_path:
+			self._read_log_from_dir(dir_path)
+		elif filename:
+			self._read_from_file(filename)
+		else:
+			# raise an error
+			pass
+
+		self._parsing()
+
+	def _read_log_from_dir(self, dir_path):
 		for fn in os.listdir(dir_path):
 			if os.path.splitext(fn)[1] == '.log':
 				with open(os.path.join(dir_path, fn), "r") as f:
 					for line in f:
 						self.data.append(line)
-		return self.data
 
-	def read_from_file(self, file_name):
+	def _read_from_file(self, file_name):
 		try:
 			with open(file_name, "r") as f:
 				for line in f:
 					self.data.append(line)
-			return self.data
 		except Exception as e:
 			print(str(e))
 
-	def read_emotes_file(self, file_path):
-		try:
-			with open(file_path, 'r') as f:
-			    emo = f.readline()
-			    for e in emo.split(','):
-			        self.emotes.append(e.split('\'')[1].lower())
-		except Exception as e:
-			print(str(e))
-
-	def parsing(self):
+	# Parsing the utterances, user_lists, time
+	def _parsing(self):
 		set_ref_time = 0
-		i = 0
 		for line in self.data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
 			match = re.match(r'\[(\d+):(\d+):(\d+)\]\s<(([\+|%|@|\^|~]+)?(\w+))>\s(.*)', line)
@@ -58,6 +58,7 @@ class TwitchChatLogParser:
 					set_ref_time = 1
 				self.user_lists.append(match.group(4))
 				self.time.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.ref_time)
+				
 				if self.spell_check:
 					u = []
 					for w in match.group(7).split():
@@ -69,34 +70,37 @@ class TwitchChatLogParser:
 					self.utterances.append([utterance])
 				else:	
 					self.utterances.append([match.group(7)])
-				self._content_check(match.group(7), i)
-				i = i + 1
 			
-	# 1: Conversation, 2: Question, 3: Streamer+Subscriber+Mod, 4: ToUser, 5: Emote, 6:Command
-	def _content_check(self, text, i): # utterance is a list
+	def set_content(self):
+		for i in range(len(self.utterances)):
+			content = self._set_content(self.utterances[i][0], i)
+			self.utterances[i].append(content)
+
+	# 1: Conversation, 2: Question, 3: To streamer, 4: ToUser, 5: Emote, 6:Command
+	def _set_content(self, text, i): # utterance is a list
 		# Command  
 		if text[0] == '!' or '^' in self.user_lists[i]:
-			return self.utterances[i].append(6)
+			return '6'
 
-		# Emote
-		for word in text.split():
-			if word.lower() in self.emotes:
-				return self.utterances[i].append(5)
-				
-			# To user    e.g. @reckful How are you doing?
-			if word[0] == '@':
-				return self.utterances[i].append(4)
+		for word in text.split():		
+			# To user   e.g. @reckful How are you doing?
+			if re.match(r'@\w+', word):
+				return '4'
 		
 			# Question
 			if word.lower() in self.inquery:
-				return self.utterances[i].append(2)
+				return '2'
+
+		# Emote 
+		if self.emo_related_check(text) == 2:
+			return '5'
 			
-		# Subscriber
-		if '%' in self.user_lists[i] or '@' in self.user_lists[i] or '~' in self.user_lists[i]:
-			return self.utterances[i].append(3)
+		# To streamer 
+		if word.lower().find('@'+self.streamer) != -1:
+			return '3'
 			
 		# Conversation
-		return self.utterances[i].append(1)
+		return '1'
 
 	def clean_up(self, str):
 		# NOTE: Only deal with english utterance right now
@@ -108,12 +112,8 @@ class TwitchChatLogParser:
 			# lemmatization
 			str = preprocess.lemmatize(str)
 			return str
-		return ''
-
-	# Sentiment Analysis by using TextBlob
-	def _sentiment_analysis(self, d, i):
-		blob = TextBlob(d, analyzer=NaiveBayesAnalyzer())
-		self.utterances[i].append(blob.sentiment.classification)
+		else:
+			return ''
 
 	# Do emo_related_check after clean_up the text 
 	def emo_related_check(self, text): 
@@ -133,16 +133,11 @@ class TwitchChatLogParser:
 				return 0
 		return 2
 
-	def write_to_csv(self, filename=None):
-		if filename:
-			fn = filename
-		else:
-			fn = 'logAnalysis.csv'
-
+	def save_to_csv(self, filename):
 		# Write to csv file 
-		with open(fn, 'w') as csvfile:
-		    fieldnames = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
-		    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+		with open(filename, 'w') as csvfile:
+		    field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
+		    writer = csv.DictWriter(csvfile, fieldnames=field_names)
 		    writer.writeheader()
 
 		    for i in range(len(self.user_lists)):
@@ -150,7 +145,7 @@ class TwitchChatLogParser:
 		    					 'topic': str(self.utterances[i][2] + 1),
 		    					 'related': '', 
 		    					 'emotion': '',
-		    					 'content': str(self.utterances[i][1]), 
+		    					 'content': self.utterances[i][1],
 		    					 'comment': self.utterances[i][0]
 		    					 })
 
@@ -161,7 +156,14 @@ class TwitchChatLogParser:
 		else:
 			self.emotes.append(emo)
 
-	def assign_topic(self, topic, index):
+	def update_emotes_by_file(self, filename):
+		with open(filename, 'r') as f:
+		    reader = csv.reader(f)
+		    emotes = list(reader)
+		    for emo in emotes[1:]:
+			    self.emotes.append(emo[0].lower())
+
+	def set_topic(self, topic, index):
 		self.utterances[index].append(topic)
 		return self.utterances[index]
 

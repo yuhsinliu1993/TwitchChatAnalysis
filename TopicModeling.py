@@ -94,7 +94,7 @@ class LDAModeling:
 	def save_topics(self, filename):
 		with open(filename, "w") as f:
 			for i in range(self.num_topics):
-				s = topic_parser.lda_model.print_topic(i, topn=5)
+				s = self.lda_model.print_topic(i, topn=5)
 				result = ""
 				for t in s.split('+'):
 					result += t.strip().split('*')[1] + " "
