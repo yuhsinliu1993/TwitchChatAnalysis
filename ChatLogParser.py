@@ -1,4 +1,5 @@
-import re, os, csv, copy
+import re, os, csv, copy, json
+from urllib.request import urlopen
 import preprocess
 from textblob import TextBlob, Word
 from textblob.sentiments import NaiveBayesAnalyzer
@@ -8,7 +9,7 @@ class TwitchChatParser:
 
 	inquery = ['what', 'what\'s', 'why', 'how', 'whether', 'when', 'where', 'which', 'who'] 
 
-	def __init__(self, spell_check=False, dir_path=None, filename=None, streamer):
+	def __init__(self, streamer, spell_check=False, dir_path=None, filename=None):
 		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
 		self.data = []			
 		# [[(utterance), (content), (topic), (related), (sentiment)], [...], ...]
@@ -20,6 +21,7 @@ class TwitchChatParser:
 		self.ref_time = 0
 		self.spell_check = spell_check
 		self.streamer = streamer
+		self.streamer_emotes = self._get_streamer_emote()
 
 		if dir_path:
 			self._read_log_from_dir(dir_path)
@@ -28,7 +30,6 @@ class TwitchChatParser:
 		else:
 			# raise an error
 			pass
-
 		self._parsing()
 
 	def _read_log_from_dir(self, dir_path):
@@ -45,6 +46,12 @@ class TwitchChatParser:
 					self.data.append(line)
 		except Exception as e:
 			print(str(e))
+
+	def _get_streamer_emote(self):
+		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
+		data = response.read().decode("utf-8")
+		data = json.loads(data)
+		return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
 	def _parsing(self):
@@ -73,7 +80,7 @@ class TwitchChatParser:
 			
 	def set_content(self):
 		for i in range(len(self.utterances)):
-			content = self._set_content(self.utterances[i][0], i)
+			content = self._set_content(self.utterances[i][0].strip(), i)
 			self.utterances[i].append(content)
 
 	# 1: Conversation, 2: Question, 3: To streamer, 4: ToUser, 5: Emote, 6:Command
@@ -120,13 +127,13 @@ class TwitchChatParser:
 		# Determine if a sentence has twitch emote pics 
 		# 0: no emote  1: emo related  2: only emo in the text
 		emo_related = 0
-		t = 0
+		has_word = 0
 		for word in text.split():
-			if word.lower() in self.emotes:
+			if word.lower() in [emo[0] for emo in self.emotes]:
 				emo_related = 1
 			else:
-				t = 1
-		if t:
+				has_word = 1
+		if has_word:
 			if emo_related:
 				return 1
 			else:
@@ -142,26 +149,35 @@ class TwitchChatParser:
 
 		    for i in range(len(self.user_lists)):
 		    	writer.writerow({'time': str(self.time[i]), 
-		    					 'topic': str(self.utterances[i][2] + 1),
+		    					 'topic': str(self.utterances[i][3] + 1),
 		    					 'related': '', 
-		    					 'emotion': '',
+		    					 'emotion': str(self.utterances[i][2]),
 		    					 'content': self.utterances[i][1],
 		    					 'comment': self.utterances[i][0]
 		    					 })
 
-	def update_emotes_list(self, emo):
-		if type(emo) == 'list':
-			for e in emo:
-				self.emotes.append(e)
-		else:
-			self.emotes.append(emo)
+	# def update_emotes_list(self, emo):
+	# 	if type(emo) == 'list':
+	# 		for e in emo:
+	# 			self.emotes.append(e)
+	# 	else:
+	# 		self.emotes.append(emo)
 
-	def update_emotes_by_file(self, filename):
+	def update_emotes_by_csv(self, filename):
 		with open(filename, 'r') as f:
 		    reader = csv.reader(f)
 		    emotes = list(reader)
 		    for emo in emotes[1:]:
-			    self.emotes.append(emo[0].lower())
+		    	if emo[0] in self.streamer_emotes:
+		    		self.emotes.append([emo[0], '1'])
+		    	else:	
+			    	self.emotes.append([emo[0], emo[1]])
+
+	def get_emote_score(self, emote):
+		for i in range(len(self.emotes)):
+			if emote == self.emotes[i][0]:
+				return self.emotes[i][1]
+		return -2
 
 	def set_topic(self, topic, index):
 		self.utterances[index].append(topic)
@@ -172,7 +188,8 @@ class TwitchChatParser:
 			if self.utterances[i][2] == topic_no:
 				print(self.utterances[i][0])
 
-
+	def set_sentiment(self, score):
+		self.utterances.append(score)
 
 # # dictionary = corpora.Dictionary(texts)
 # # corpus = [dictionary.doc2bow(text) for text in texts]

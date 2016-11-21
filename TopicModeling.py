@@ -7,7 +7,7 @@ from gensim.models import LdaModel
 from itertools import chain
 
 class LDAModeling:
-
+	
 	stemmer = SnowballStemmer("english")
 
 	def __init__(self, data):
