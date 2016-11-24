@@ -121,7 +121,7 @@ class TwitchChatParser:
 			# Tagging.  TODO: make a twitch emotes tagging and remove them?
 			str = preprocess.tag_and_remove(str)
 			# lemmatization
-			str = preprocess.lemmatize(str)
+			# str = preprocess.lemmatize(str)
 			return str
 		else:
 			return ''
