@@ -7,7 +7,7 @@ from gensim.models import LdaModel
 from itertools import chain
 
 class LDAModeling:
-
+	
 	stemmer = SnowballStemmer("english")
 
 	def __init__(self, data):
@@ -18,8 +18,8 @@ class LDAModeling:
 		self._corpus = []
 		self._dictionary = []
 		self.lda_model = None
-		self.all_cluster = []
-		self._threshold = 0
+		# self.all_cluster = []
+		# self._threshold = 0
 		self.num_topics = 0
 		
 	def tokenization(self):
@@ -83,22 +83,52 @@ class LDAModeling:
 		self.lda_model = LdaModel(corpus=self._corpus, id2word=self._dictionary, num_topics=self.num_topics, alpha=alpha, passes=passes, minimum_probability=0)
 		return self.lda_model
 
-	def get_data_topic(self, query):
-		query = self._dictionary.doc2bow(query.split())
+	def _get_data_topic(self, query): 
+		# Similarity Queries
+		query = self._dictionary.doc2bow(query.lower().split())
 		topic, probability = list(sorted(self.lda_model[query], key=lambda x: x[1]))[-1]
 		return topic
 
-	def print_topic(self, topic_no, top_n=5):
-		self.lda_model.print_topic(topic_no, top_n)
+	def _get_topics_and_distribution(self):
+		topics = {}
+		for i in range(self.num_topics):
+			s = self.lda_model.print_topic(i, topn=10)
+			topics[i] = []
+			for t in s.split('+'):
+				topics[i].append((t.strip().split('*')[1], float(t.strip().split('*')[0])))
+		return topics
 
-	def save_topics(self, filename):
+	def print_topic(self, topic_no, top_n=5):
+		print(self.lda_model.print_topic(topic_no, top_n))
+
+	def save_topics(self, filename, threshold, topics_dict):
 		with open(filename, "w") as f:
 			for i in range(self.num_topics):
-				s = self.lda_model.print_topic(i, topn=5)
 				result = ""
-				for t in s.split('+'):
-					result += t.strip().split('*')[1] + " "
+				for t_d in topics_dict[i]:
+					if t_d[1] >= threshold:
+						result += t_d[0] + " "
 				f.write(result.rstrip()+"\n")
+			f.write(" ".join([e[0] for e in topics_dict[self.num_topics]]))
+
+	def set_topics(self, text_parser, emo_only_index):
+		emo_topics = []
+		emo_list = [e[0] for e in text_parser.emotes]
+		for i in range(len(text_parser.utterances)):
+			if emo_only_index[i] == 1:
+				text_parser.utterances[i].append(self.num_topics)
+				for word in text_parser.utterances[i][0].split():
+					if word.lower() in emo_list:
+						emo_topics.append((word.lower(), 0))
+			else:
+				topic = self._get_data_topic(text_parser.utterances[i][0])	# topic: 0 ~ topic_num-1
+				text_parser.utterances[i].append(topic)
+		
+		emo_topics = list(set(emo_topics))
+		topics_dict = self._get_topics_and_distribution()
+		topics_dict[self.num_topics] = emo_topics
+
+		return topics_dict
 
 	# def lda_topics_clustering(self, lda_model):
 	# 	# Assigns the topics to the _documents in corpus

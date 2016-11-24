@@ -1,4 +1,5 @@
-import re, os, csv, copy
+import re, os, csv, copy, json
+from urllib.request import urlopen
 import preprocess
 from textblob import TextBlob, Word
 from textblob.sentiments import NaiveBayesAnalyzer
@@ -6,9 +7,12 @@ from textblob.sentiments import NaiveBayesAnalyzer
 
 class TwitchChatParser:
 
-	inquery = ['what', 'what\'s', 'why', 'how', 'whether', 'when', 'where', 'which', 'who'] 
+	inquery = ['what', 'what\'s', 'why', 'how', 'whether', 'when', 'where', 'which', 'who', 'do you', 'are you', 'will you']
+	# twitch memes or common words that are not easy to do sentiment analysis
+	common_pos = ['lul', 'lol', 'imao', 'xd', 'gg', 'ggwp']
+	common_neg = ['rekt', 'wtf', 'fuck', 'nigger', 'rip']
 
-	def __init__(self, spell_check=False, dir_path=None, filename=None, streamer):
+	def __init__(self, streamer, spell_check=False, dir_path=None, filename=None, keyword=None):
 		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
 		self.data = []			
 		# [[(utterance), (content), (topic), (related), (sentiment)], [...], ...]
@@ -20,6 +24,8 @@ class TwitchChatParser:
 		self.ref_time = 0
 		self.spell_check = spell_check
 		self.streamer = streamer
+		self.streamer_emotes = self._get_streamer_emote()
+		self.keyword = copy.copy(keyword)
 
 		if dir_path:
 			self._read_log_from_dir(dir_path)
@@ -28,7 +34,6 @@ class TwitchChatParser:
 		else:
 			# raise an error
 			pass
-
 		self._parsing()
 
 	def _read_log_from_dir(self, dir_path):
@@ -45,6 +50,12 @@ class TwitchChatParser:
 					self.data.append(line)
 		except Exception as e:
 			print(str(e))
+
+	def _get_streamer_emote(self):
+		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
+		data = response.read().decode("utf-8")
+		data = json.loads(data)
+		return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
 	def _parsing(self):
@@ -73,7 +84,7 @@ class TwitchChatParser:
 			
 	def set_content(self):
 		for i in range(len(self.utterances)):
-			content = self._set_content(self.utterances[i][0], i)
+			content = self._set_content(self.utterances[i][0].strip(), i)
 			self.utterances[i].append(content)
 
 	# 1: Conversation, 2: Question, 3: To streamer, 4: ToUser, 5: Emote, 6:Command
@@ -120,59 +131,83 @@ class TwitchChatParser:
 		# Determine if a sentence has twitch emote pics 
 		# 0: no emote  1: emo related  2: only emo in the text
 		emo_related = 0
-		t = 0
+		has_word = 0
 		for word in text.split():
-			if word.lower() in self.emotes:
+			if word.lower() in [emo[0] for emo in self.emotes]:
 				emo_related = 1
 			else:
-				t = 1
-		if t:
+				has_word = 1
+		if has_word:
 			if emo_related:
 				return 1
 			else:
 				return 0
 		return 2
 
-	def save_to_csv(self, filename):
-		# Write to csv file 
+	def save_log_to_csv(self, filename):
 		with open(filename, 'w') as csvfile:
-		    field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
-		    writer = csv.DictWriter(csvfile, fieldnames=field_names)
-		    writer.writeheader()
+			field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
+			writer = csv.DictWriter(csvfile, fieldnames=field_names)
+			writer.writeheader()
 
-		    for i in range(len(self.user_lists)):
-		    	writer.writerow({'time': str(self.time[i]), 
-		    					 'topic': str(self.utterances[i][2] + 1),
-		    					 'related': '', 
-		    					 'emotion': '',
-		    					 'content': self.utterances[i][1],
-		    					 'comment': self.utterances[i][0]
-		    					 })
+			for i in range(len(self.user_lists)):
+				writer.writerow({'time': str(self.time[i]), 
+								 'topic': str(self.utterances[i][3]),
+								 'related': self.utterances[i][4],
+								 'emotion': str(self.utterances[i][2]),
+								 'content': self.utterances[i][1],
+								 'comment': self.utterances[i][0]
+								 })
 
-	def update_emotes_list(self, emo):
-		if type(emo) == 'list':
-			for e in emo:
-				self.emotes.append(e)
-		else:
-			self.emotes.append(emo)
-
-	def update_emotes_by_file(self, filename):
+	def update_emotes_by_csv(self, filename): 
+		# store "lower-case" emotion and its emo-score
 		with open(filename, 'r') as f:
-		    reader = csv.reader(f)
-		    emotes = list(reader)
-		    for emo in emotes[1:]:
-			    self.emotes.append(emo[0].lower())
+			reader = csv.reader(f)
+			emotes = list(reader)
+			for emo in emotes[1:]:
+				if emo[0] in self.streamer_emotes:
+					self.emotes.append([emo[0].lower(), '1'])
+				else:	
+					self.emotes.append([emo[0].lower(), emo[1]])
 
-	def set_topic(self, topic, index):
-		self.utterances[index].append(topic)
-		return self.utterances[index]
+	def get_emote_score(self, emote):
+		for i in range(len(self.emotes)):
+			if emote == self.emotes[i][0]:
+				return int(self.emotes[i][1])
+		return -2
 
 	def show_all_utterance_with_topic(self, topic_no):
 		for i in range(len(self.utterances)):
 			if self.utterances[i][2] == topic_no:
 				print(self.utterances[i][0])
 
+	def common_text_check(self, text):
+		score = 0
+		for t in text.split():
+			for pos in self.common_pos:
+				if t.lower().find(pos) >= 0:
+					score += 1
+			for neg in self.common_neg:
+				if t.lower().find(neg) >= 0:
+					score -= 1
+		return score
 
+	def set_relation(self, topics_dict, threshold):
+		total_score = 0
+		for i in range(len(self.utterances)):
+			score = 0
+			for word in self.utterances[i][0].split():
+				for t_d in topics_dict[self.utterances[i][-1]]:
+					if word.lower().find(t_d[0]) >= 0:
+						score += t_d[1]	
+			# print("[relation] #%d: %f" % (i, score))
+			total_score += score
+			if score >= threshold:
+				self.utterances[i].append('1')
+			else:
+				self.utterances[i].append('2')
+		
+		
 
 # # dictionary = corpora.Dictionary(texts)
 # # corpus = [dictionary.doc2bow(text) for text in texts]

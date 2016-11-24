@@ -1,64 +1,53 @@
-from ChatLogParser import TwitchChatLogParser
+from ChatLogParser import TwitchChatParser
 from TopicModeling import LDAModeling
+from SentimentAnalysis import SentimentAnalyzer
 
-# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 LOG_DIR = "/Users/Michaeliu/Twitch/logfile"
 DIR = "/Users/Michaeliu/Twitch/"
-text_parser = TwitchChatLogParser()
-text_parser.read_emotes_file(DIR+"emotes")
 
-# [PROBLEM] how about emoji emote ?
-robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", "LUL", "lul"]
-text_parser.update_emotes_list(robot_emotes)
-# emoji_emotes = ["👻", "🇷",  "🇪", "🇰", "🇹", "🎶", "🛠", "🤔", "👌", "🙂"]
-logs = text_parser.read_log_from_dir(LOG_DIR)
-text_parser.parsing() # "user_list", "utterance", "content", "time" are done
+# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
+keyword = []
+text_parser = TwitchChatParser(streamer="reckful", dir_path=LOG_DIR)
+text_parser.update_emotes_by_csv('sub_emotes.csv')
+text_parser.update_emotes_by_csv('global_emotes.csv')
+text_parser.set_content()
 
-# ==== Clean up the data ====
-training_data = []
-emo_only_data = []
-emo_only_index = []
-all_cleaned_data = [] 	# training_data + emo_only_data + empty_data
-for i in range(len(text_parser.utterances)):
-    s = text_parser.clean_up(text_parser.utterances[i][0])
-    if s: # s is not empty
-        emo_related = text_parser.emo_related_check(s)
-        if emo_related == 2:
-            emo_only_data.append(s)
-            emo_only_index.append(1)
-        elif emo_related == 1:
-            new = ''
-            for w in s.split():
-                if w not in text_parser.emotes:
-                    new += " " + w
-            training_data.append(new.strip())
-            emo_only_index.append(0)
-        else:
-            training_data.append(s)
-            emo_only_index.append(0)
-    else: # s is empty
-        emo_only_index.append(0)
-    all_cleaned_data.append(s)
+        
+# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
+sentier = SentimentAnalyzer()
+sentier.set_sentiment(text_parser)
 
 
-# ==== topic parser ====
-topic_parser = LDAModeling(data=training_data)
+# ==== LDA Topic Modeling ====
+topic_parser = LDAModeling(data=sentier.training_data)
 documents = topic_parser.tokenization()
 topic_parser.build_lda_model(num_topics=20, alpha=0.01, passes=20)
 
-# Assign topic for each utterance
-for i in range(len(all_cleaned_data)):
-	if emo_only_index[i] == 1:
-		text = text_parser.assign_topic(-1, i)
-	else:
-    	topic = topic_parser.get_data_topic(all_cleaned_data[i])
-    	text = text_parser.assign_topic(topic, i)
-
-topic_parser.save_topics("topic.txt")
-
+# [PROBLEM]
+# Whether an utternace is related or unrelated to the topic seems much likely to be a huge work right now,
+# I think it need some key words from the stream and the game category(e.g. hearthstone, league of legend),
+# and then try to use the provided key word information to retrieve or learning or crawl the data from the 
+# Internet (e.g. google search). Then, we can analyze what the proportion of relation to the topic is. 
+# Thus, I choose calculating the total score of relation with topics selected from lda modeling through 
+# training data. [NEED TO TRY] Trying find a better way to select topics from twitch chat corpus. However, 
+# twitch is a loose chatting system which means it hard to pick a relatively reliable topic...idk. 
 
 
+# ==== Assign topic for each utterance ====
+topics_dict = topic_parser.set_topics(text_parser, sentier.emo_only_index)
 
-# analyzer = SentimentAnalyzer()
-# labeled_data = analyzer.sentiment_analysis(text_parser.get_cleaned_utterances())
 
+# ==== Cal score of relation for each utterance ====
+text_parser.set_relation(topics_dict, 0.05)
+
+
+# ==== Write to file ====
+topic_parser.save_topics("topics.txt", 0.02, topics_dict)
+text_parser.save_log_to_csv("final.csv")
+
+
+
+# ==== Get Parameters ====
+# COMMENT_NUM = len(text_parser.utterances)
+# TOPIC_NUM = topic_parser.num_topics
+# VIDEO_LENGTH = 
