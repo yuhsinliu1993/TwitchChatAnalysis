@@ -20,7 +20,7 @@ class SentimentAnalyzer():
 			return -1
 
 	def set_sentiment(self, text_parser):
-		print("[+] Starting sentiment analysis...")
+		print("[+] Starting sentiment analysis... Total: %d", len(text_parser.utterances))
 		emo_list = [emo[0] for emo in text_parser.emotes]
 		for i in range(len(text_parser.utterances)):
 			str = text_parser.clean_up(text_parser.utterances[i][0])
@@ -42,7 +42,7 @@ class SentimentAnalyzer():
 					self.emo_only_index.append(1)
 				elif __type == 1: # 1: emo related 
 					new_str = "" # store the text without emo
-					for w in str.split():
+					for w in str.strip().split():
 						if w.lower() in emo_list:
 							emo_score += text_parser.get_emote_score(w)
 						else:
@@ -65,6 +65,7 @@ class SentimentAnalyzer():
 					self.training_data.append(new_str)
 					self.emo_only_index.append(0)
 				else: # 0: no emotes in text
+					str = str.strip()
 					text_score = text_parser.common_text_check(str)
 					if text_score > 0:
 						text_parser.utterances[i].append(1)
