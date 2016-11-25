@@ -1,4 +1,4 @@
-import argparse
+import argparse, os
 from ChatLogParser import TwitchChatParser
 from TopicModeling import LDAModeling
 from SentimentAnalysis import SentimentAnalyzer
@@ -18,8 +18,8 @@ def main(**kwargs):
 		kwargs = _get_kwargs()
 
 	
-	DIR = '/Users/Michaeliu/Twitch/'
-	LOG_DIR = '/Users/Michaeliu/Twitch/logfile/' + kwargs['streamer']
+	DIR = os.path.abspath('')
+	LOG_DIR = os.path.abspath('logfile'+kwargs['streamer'])
 
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
