@@ -19,7 +19,7 @@ def main(**kwargs):
 
 	
 	DIR = os.path.abspath('')
-	LOG_DIR = os.path.abspath('logfile'+kwargs['streamer'])
+	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
 
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
