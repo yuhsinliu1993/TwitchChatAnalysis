@@ -40,6 +40,7 @@ class TwitchChatParser:
 		for fn in os.listdir(dir_path):
 			if os.path.splitext(fn)[1] == '.log':
 				with open(os.path.join(dir_path, fn), "r") as f:
+					print("[*] Loading the log file '%s'..." % fn)
 					for line in f:
 						self.data.append(line)
 
@@ -48,6 +49,7 @@ class TwitchChatParser:
 			with open(file_name, "r") as f:
 				for line in f:
 					self.data.append(line)
+					print("[*] Loading the log file '%s'..." % file_name)
 		except Exception as e:
 			print(str(e))
 
@@ -98,6 +100,7 @@ class TwitchChatParser:
 					self.utterances.append([match.group(7)])
 			
 	def set_content(self):
+		print("[+] Setting content type for each utterance...")
 		for i in range(len(self.utterances)):
 			content = self._set_content(self.utterances[i][0].strip(), i)
 			self.utterances[i].append(content)
@@ -208,6 +211,7 @@ class TwitchChatParser:
 		return score
 
 	def set_relation(self, topics_dict, threshold):
+		print("[+] Setting relation for each utterance...")
 		total_score = 0
 		for i in range(len(self.utterances)):
 			score = 0

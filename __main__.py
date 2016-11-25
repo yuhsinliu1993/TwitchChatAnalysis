@@ -17,7 +17,6 @@ def main(**kwargs):
 	if not kwargs:
 		kwargs = _get_kwargs()
 
-	
 	DIR = os.path.abspath('')
 	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
 

@@ -112,6 +112,7 @@ class LDAModeling:
 			f.write(" ".join([e[0] for e in topics_dict[self.num_topics]]))
 
 	def set_topics(self, text_parser, emo_only_index):
+		print("[+] Setting topic for each utterance...")
 		emo_topics = []
 		emo_list = [e[0] for e in text_parser.emotes]
 		for i in range(len(text_parser.utterances)):

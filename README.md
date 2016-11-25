@@ -1,9 +1,9 @@
 **Twitch Chatting Log Analysis**
 
-- Before we start
-   - require python package
+- Before start
+   - Required python package
       - nltk
-      - download nltk corpus
+      - nltk corpus
       
           ```python
           import nltk
