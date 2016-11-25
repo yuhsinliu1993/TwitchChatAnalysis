@@ -8,13 +8,15 @@ def _get_kwargs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")
 	parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
-	parser.add_argument("-n", "--num-topic", type=int, help="Specify the num of topics for LDA modeling")
+	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
 	return vars(parser.parse_args())
+
 
 def main(**kwargs):
 	
 	if not kwargs:
 		kwargs = _get_kwargs()
+
 	
 	DIR = '/Users/Michaeliu/Twitch/'
 	LOG_DIR = '/Users/Michaeliu/Twitch/logfile/' + kwargs['streamer']
@@ -32,9 +34,13 @@ def main(**kwargs):
 
 
 	# ==== LDA Topic Modeling ====
+	if kwargs['num_topics']:
+		num_topics = kwargs['num_topics']
+	else:
+		num_topics = 20
 	topic_parser = LDAModeling(data=sentier.training_data)
 	documents = topic_parser.tokenization()
-	topic_parser.build_lda_model(num_topics=20, alpha=0.01, passes=20)
+	topic_parser.build_lda_model(num_topics=num_topics, alpha=0.01, passes=20)
 
 	# [PROBLEM]
 	# Whether an utternace is related or unrelated to the topic seems much likely to be a huge work right now,
@@ -55,17 +61,15 @@ def main(**kwargs):
 
 
 	# ==== Write to file ====
-	topic_parser.save_topics("topics.txt", 0.02, topics_dict)
-	text_parser.save_log_to_csv("final.csv")
-
+	topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)
+	text_parser.save_log_to_csv(kwargs['streamer'] + '_final.csv')
 
 
 	# ==== Get Parameters ====
-	# COMMENT_NUM = len(text_parser.utterances)
-	# TOPIC_NUM = topic_parser.num_topics
+	print('COMMENT_NUM: %d' % len(text_parser.utterances))
+	print('TOPIC_NUM: %d' % num_topics)
 	# VIDEO_LENGTH = 
+
 
 if __name__ == '__main__':
 	main()
-
-

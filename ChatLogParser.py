@@ -54,8 +54,23 @@ class TwitchChatParser:
 	def _get_streamer_emote(self):
 		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
 		data = response.read().decode("utf-8")
-		data = json.loads(data)
-		return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
+		if data == '':
+			response = urlopen('https://twitchemotes.com/api_cache/v2/images.json')
+			data = response.read().decode("utf-8")
+			data = json.loads(data)
+			
+			if data == '':
+				print("[!!] Cannot retrieve '%s' emotes\n" % self.streamer)
+				return []
+			else:
+				emo = []
+				for _id in data['images']:
+					if data['images'][_id]['channel'] == self.streamer:
+						emo.append(data['images'][_id]['code'])
+				return emo
+		else:
+			data = json.loads(data)
+			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
 	def _parsing(self):
