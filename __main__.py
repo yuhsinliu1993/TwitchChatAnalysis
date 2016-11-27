@@ -32,7 +32,7 @@ def main(**kwargs):
 	sentier.set_sentiment(text_parser)
 
 
-	# ==== LDA Topic Modeling ====
+	# ==== Topic Modeling ====
 	if kwargs['num_topics']:
 		num_topics = kwargs['num_topics']
 	else:
@@ -41,23 +41,19 @@ def main(**kwargs):
 	documents = topic_parser.tokenization()
 	topic_parser.build_lda_model(num_topics=num_topics, alpha=0.01, passes=20)
 
-	# [PROBLEM]
-	# Whether an utternace is related or unrelated to the topic seems much likely to be a huge work right now,
-	# I think it need some key words from the stream and the game category(e.g. hearthstone, league of legend),
-	# and then try to use the provided key word information to retrieve or learning or crawl the data from the 
-	# Internet (e.g. google search). Then, we can analyze what the proportion of relation to the topic is. 
-	# Thus, I choose calculating the total score of relation with topics selected from lda modeling through 
-	# training data. [NEED TO TRY] Trying find a better way to select topics from twitch chat corpus. However, 
-	# twitch is a loose chatting system which means it hard to pick a relatively reliable topic...idk. 
+	# [RPOBLEM 2 - Topic Modeling ]
+	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 
+	# does not work well on short and sparse texts.
 
+	# [PROBLEM 1 - Relation between topic and utterance ]
+	# How does an utternace related to topic? Should I aggregate the score of every word in the utterance, and  
+	# then judge it via the threshold I set? Should I trust the topic model? 
 
 	# ==== Assign topic for each utterance ====
 	topics_dict = topic_parser.set_topics(text_parser, sentier.emo_only_index)
 
-
 	# ==== Cal score of relation for each utterance ====
 	text_parser.set_relation(topics_dict, 0.05)
-
 
 	# ==== Write to file ====
 	topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)

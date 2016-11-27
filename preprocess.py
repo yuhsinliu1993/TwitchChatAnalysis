@@ -3,15 +3,13 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from stop_words import get_stop_words
-import string
-import re
-import langid
+import string, re, langid, itertools
 
 tokenizer = RegexpTokenizer(r'\w+')
 en_stop = get_stop_words('en')
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
 # Use langid module to classify the language to make sure we are applying the correct cleanup actions for English
-# https://github.com/saffsd/langid.py
 def check_lang(str):
     predict_lang = identifier.classify(str)
     if predict_lang[1] >= .9:
@@ -21,13 +19,9 @@ def check_lang(str):
     return language
 
 
-# Stop words usually refer to the most common words in a language, there is no single universal list of stop words used
-# by all natural language processing tools.
-# Reduces Dimensionality
-# removes stop words of a single Tweets (cleaned_str/row/document)
+# stop words usually refer to the most common words in a language
+# reduce dimensionality
 def remove_stops(str):
-    # expects a string
-    # stops = set(stopwords.words("english"))
     list_pos = 0
     cleaned_str = ''
     text = str.split()
@@ -42,8 +36,20 @@ def remove_stops(str):
             list_pos += 1
     return cleaned_str
 
-# catch-all to remove other 'words' that I felt didn't add a lot of value
-# Reduces Dimensionality, gets rid of a lot of unique urls
+def remove_emoji(str):
+    if str:
+        try:
+        # UCS-32
+            pattern = re.compile(u'([\U00002600-\U000027BF])|([\U0001f300-\U0001f64F])|([\U0001f680-\U0001f6FF])')
+        except re.error:
+        # UCS-16
+            pattern = re.compile(u'([\u2600-\u27BF])|([\uD83C][\uDF00-\uDFFF])|([\uD83D][\uDC00-\uDE4F])|([\uD83D][\uDE80-\uDEFF])')
+        return pattern.sub('', str).strip()
+    else:
+        return ''
+
+# reduce dimensionality
+# remove features that are useless
 def remove_features(data_str):
     # compile regex
     url_re = re.compile('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
@@ -51,33 +57,42 @@ def remove_features(data_str):
     num_re = re.compile('(\\d+)')
     mention_re = re.compile('@(\w+)')
     alpha_num_re = re.compile("^[a-z0-9_.]+$")
-    # convert to lowercase
-    data_str = data_str.lower()
+    
+    # to lowercase
+    # data_str = data_str.lower()
+    
     # remove hyperlinks
     data_str = url_re.sub(' ', data_str)
+    
     # remove @mentions
-    data_str = mention_re.sub(' ', data_str)
+    # data_str = mention_re.sub(' ', data_str)
+    
     # remove puncuation
     data_str = punc_re.sub(' ', data_str)
+    
     # remove numeric 'words'
     data_str = num_re.sub(' ', data_str)
-    # remove non a-z 0-9 characters and words shorter than 3 characters
-    list_pos = 0
-    cleaned_str = ''
-    tokens = tokenizer.tokenize(data_str)
-    for word in tokens:
-        if list_pos == 0:
-            if alpha_num_re.match(word) and len(word) > 1:
-                cleaned_str = word
-            else:
-                cleaned_str = ' '
-        else:
-            if alpha_num_re.match(word) and len(word) > 1:
-                cleaned_str = cleaned_str + ' ' + word
-            else:
-                cleaned_str += ' '
-        list_pos += 1
-    return cleaned_str
+    
+    # remove repeated letters, e.g. "loooooooooool" => "lol"
+    data_str = ''.join(ch for ch, _ in itertools.groupby(data_str))
+
+    # remove non a-z 0-9 characters and words shorter than 1 characters
+    # list_pos = 0
+    # cleaned_str = ''
+    # tokens = tokenizer.tokenize(data_str)
+    # for word in tokens:
+    #     if list_pos == 0:
+    #         if alpha_num_re.match(word) and len(word) > 1:
+    #             cleaned_str = word
+    #         else:
+    #             cleaned_str = ' '
+    #     else:
+    #         if alpha_num_re.match(word) and len(word) > 1:
+    #             cleaned_str = cleaned_str + ' ' + word
+    #         else:
+    #             cleaned_str += ' '
+    #     list_pos += 1
+    return data_str
 
 
 # Process of classifying words into their parts of speech and labeling them accordingly is known as part-of-speech

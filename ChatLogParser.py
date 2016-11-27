@@ -134,10 +134,11 @@ class TwitchChatParser:
 	def clean_up(self, str):
 		# NOTE: Only deal with english utterance right now
 		if preprocess.check_lang(str) == 'en':
+			str = preprocess.remove_emoji(str)
 			str = preprocess.remove_stops(str)
 			str = preprocess.remove_features(str)
 			# Tagging.  TODO: make a twitch emotes tagging and remove them?
-			str = preprocess.tag_and_remove(str)
+			# str = preprocess.tag_and_remove(str)
 			# lemmatization
 			# str = preprocess.lemmatize(str)
 			return str
