@@ -146,7 +146,7 @@ class TwitchChatParser:
 			return ''
 
 	# Do emo_related_check after clean_up the text 
-	def emo_related_check(self, text): 
+	def emo_related_check(self, text):
 		# Determine if a sentence has twitch emote pics 
 		# 0: no emote  1: emo related  2: only emo in the text
 		emo_related = 0
@@ -237,5 +237,3 @@ class TwitchChatParser:
 # # ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=10, id2word = dictionary, passes=20)
 # # # print(ldamodel.print_topics(num_topics=10, num_words=5),)
 			
-			
-		

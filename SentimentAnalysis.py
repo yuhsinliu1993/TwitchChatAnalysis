@@ -20,7 +20,7 @@ class SentimentAnalyzer():
 			return -1
 
 	def set_sentiment(self, text_parser):
-		print("[+] Starting sentiment analysis... Total: %d", len(text_parser.utterances))
+		print("[+] Starting sentiment analysis... Total: %d" % len(text_parser.utterances))
 		emo_list = [emo[0] for emo in text_parser.emotes]
 		for i in range(len(text_parser.utterances)):
 			str = text_parser.clean_up(text_parser.utterances[i][0])

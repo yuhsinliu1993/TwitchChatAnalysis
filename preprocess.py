@@ -4,6 +4,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from stop_words import get_stop_words
 import string, re, langid, itertools
+from collections import Counter
 
 tokenizer = RegexpTokenizer(r'\w+')
 en_stop = get_stop_words('en')

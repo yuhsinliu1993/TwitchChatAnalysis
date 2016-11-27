@@ -1,8 +1,4 @@
 import argparse, os
-from ChatLogParser import TwitchChatParser
-from TopicModeling import LDAModeling
-from SentimentAnalysis import SentimentAnalyzer
-
 
 def _get_kwargs():
 	parser = argparse.ArgumentParser()
@@ -17,6 +13,15 @@ def main(**kwargs):
 	if not kwargs:
 		kwargs = _get_kwargs()
 
+	from ChatLogParser import TwitchChatParser
+	from TopicModeling import LDAModeling
+	from SentimentAnalysis import SentimentAnalyzer
+
+	if kwargs['num_topics']:
+		num_topics = kwargs['num_topics']
+	else:
+		num_topics = 10
+
 	DIR = os.path.abspath('')
 	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
 
@@ -25,27 +30,21 @@ def main(**kwargs):
 	text_parser.update_emotes_by_csv('sub_emotes.csv')
 	text_parser.update_emotes_by_csv('global_emotes.csv')
 	text_parser.set_content()
-
 	        
 	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
 	sentier = SentimentAnalyzer()
 	sentier.set_sentiment(text_parser)
 
-
 	# ==== Topic Modeling ====
-	if kwargs['num_topics']:
-		num_topics = kwargs['num_topics']
-	else:
-		num_topics = 20
-	topic_parser = LDAModeling(data=sentier.training_data)
-	documents = topic_parser.tokenization()
-	topic_parser.build_lda_model(num_topics=num_topics, alpha=0.01, passes=20)
+	
+	topic_parser = LDAModeling(training_data=sentier.training_data, num_topics=num_topics)
+	topic_parser.build_lda_model()
 
-	# [RPOBLEM 2 - Topic Modeling ]
+	# [RPOBLEM 1 - Topic Modeling ]
 	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 
 	# does not work well on short and sparse texts.
 
-	# [PROBLEM 1 - Relation between topic and utterance ]
+	# [PROBLEM 2 - Relation between topic and utterance ]
 	# How does an utternace related to topic? Should I aggregate the score of every word in the utterance, and  
 	# then judge it via the threshold I set? Should I trust the topic model? 
 

@@ -6,26 +6,22 @@ from gensim import corpora
 from gensim.models import LdaModel
 from itertools import chain
 
-class LDAModeling:
+
+class BaseModel:
 	
 	stemmer = SnowballStemmer("english")
+	
 
 	def __init__(self, data):
 		self.data = copy.copy(data)
 		self.totalvocab_stemmed = []
 		self.totalvocab_tokenized = []
-		self._documents = [] 	# cleaned tokens
-		self._corpus = []
-		self._dictionary = []
-		self.lda_model = None
-		# self.all_cluster = []
-		# self._threshold = 0
-		self.num_topics = 0
+		self._documents = []	 	# cleaned tokens
 		
 	def tokenization(self):
 		for text in self.data:
-			allwords_stemmed = self._tokenize_and_stem(text) #for each item in 'synopses', tokenize/stem
-			self.totalvocab_stemmed.append(allwords_stemmed) #extend the 'totalvocab_stemmed' list
+			# allwords_stemmed = self._tokenize_and_stem(text) #for each item in 'synopses', tokenize/stem
+			# self.totalvocab_stemmed.append(allwords_stemmed) #extend the 'totalvocab_stemmed' list
 			
 			allwords_tokenized = self._tokenize_only(text)
 			self.totalvocab_tokenized.append(allwords_tokenized)
@@ -62,28 +58,58 @@ class LDAModeling:
 		token_frequency = defaultdict(int)
 		# removes numbers only words
 		tmp_docs = [[token for token in doc if len(token.strip(digits)) == len(token)] for doc in self.totalvocab_tokenized]
-
 		# count all token
 		for doc in tmp_docs:
 			for token in doc:
 				token_frequency[token] += 1
 
-		# keep words that occur more than once
-		self._documents = [[token for token in doc if token_frequency[token] > 1]  for doc in tmp_docs]
-   
+		# [NEED TO FIX] keep words that occur more than once 
+		self._documents = [[token for token in doc if token_frequency[token] > 0]  for doc in tmp_docs]
+		
 		for doc in self._documents:
 			doc.sort()
 
-	def build_lda_model(self, num_topics, alpha, passes):
-		self.num_topics = num_topics
-		self._dictionary = corpora.Dictionary(self._documents)
-		# assign new word ids to all words. This is done to make the ids more compact
-		self._dictionary.compactify()
-		self._corpus = [self._dictionary.doc2bow(doc) for doc in self._documents]
-		self.lda_model = LdaModel(corpus=self._corpus, id2word=self._dictionary, num_topics=self.num_topics, alpha=alpha, passes=passes, minimum_probability=0)
-		return self.lda_model
 
-	def _get_data_topic(self, query): 
+class LDAModeling(BaseModel):
+
+	def __init__(self, training_data, num_topics, alpha=0.01, passes=20):
+		super().__init__(training_data)
+		self.lda_model = None
+		self.num_topics = num_topics
+		self._corpus = []
+		self._dictionary = []
+		self._passes = passes
+		self._alpha = alpha
+
+		self.tokenization()
+
+	def build_lda_model(self):		
+		self._dictionary = corpora.Dictionary(self._documents)
+		self._dictionary.compactify()	# assign new word ids to all words. This is done to make the ids more compact
+		self._corpus = [self._dictionary.doc2bow(doc) for doc in self._documents]
+		self.lda_model = LdaModel(corpus=self._corpus, id2word=self._dictionary, num_topics=self.num_topics, alpha=self._alpha, passes=self._passes, minimum_probability=0)
+
+	def set_topics(self, text_parser, emo_only_index):
+		print("[*] Setting topic for each utterance...")
+		emo_topics = []
+		emo_list = [e[0] for e in text_parser.emotes]
+		for i in range(len(text_parser.utterances)):
+			if emo_only_index[i] == 1:
+				text_parser.utterances[i].append(self.num_topics)
+				for word in text_parser.utterances[i][0].split():
+					if word.lower() in emo_list:
+						emo_topics.append((word.lower(), 0))
+			else:
+				topic = self.query_topic(text_parser.utterances[i][0])	# topic: 0 ~ topic_num-1
+				text_parser.utterances[i].append(topic)
+		
+		emo_topics = list(set(emo_topics))
+		topics_dict = self._get_topics_and_distribution()
+		topics_dict[self.num_topics] = emo_topics
+
+		return topics_dict
+
+	def query_topic(self, query): 
 		# Similarity Queries
 		query = self._dictionary.doc2bow(query.lower().split())
 		topic, probability = list(sorted(self.lda_model[query], key=lambda x: x[1]))[-1]
@@ -99,7 +125,8 @@ class LDAModeling:
 		return topics
 
 	def print_topic(self, topic_no, top_n=5):
-		print(self.lda_model.print_topic(topic_no, top_n))
+		if self.lda_model:
+			self.lda_model.print_topic(topic_no, top_n)
 
 	def save_topics(self, filename, threshold, topics_dict):
 		with open(filename, "w") as f:
@@ -110,38 +137,6 @@ class LDAModeling:
 						result += t_d[0] + " "
 				f.write(result.rstrip()+"\n")
 			f.write(" ".join([e[0] for e in topics_dict[self.num_topics]]))
-
-	def set_topics(self, text_parser, emo_only_index):
-		print("[+] Setting topic for each utterance...")
-		emo_topics = []
-		emo_list = [e[0] for e in text_parser.emotes]
-		for i in range(len(text_parser.utterances)):
-			if emo_only_index[i] == 1:
-				text_parser.utterances[i].append(self.num_topics)
-				for word in text_parser.utterances[i][0].split():
-					if word.lower() in emo_list:
-						emo_topics.append((word.lower(), 0))
-			else:
-				topic = self._get_data_topic(text_parser.utterances[i][0])	# topic: 0 ~ topic_num-1
-				text_parser.utterances[i].append(topic)
-		
-		emo_topics = list(set(emo_topics))
-		topics_dict = self._get_topics_and_distribution()
-		topics_dict[self.num_topics] = emo_topics
-
-		return topics_dict
-
-	# def lda_topics_clustering(self, lda_model):
-	# 	# Assigns the topics to the _documents in corpus
-	# 	lda_corpus = lda_model[self._corpus]
-	# 	scores = list(chain(*[[score for topic_id, score in topic] for topic in [doc for doc in lda_corpus]]))
-	# 	self._threshold = sum(scores)/len(scores)
-	# 	for k in range(self.num_topics):
-	# 	    self.all_cluster.append([j for i,j in zip(lda_corpus, self.data) if i[k][1] > self._threshold])
-	# 	return self.all_cluster
-
-	# def _assign_topic_to_each_utterance():
-	# 	for each 
 
 
 
