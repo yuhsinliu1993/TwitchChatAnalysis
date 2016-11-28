@@ -1,8 +1,7 @@
-import re, os, csv, copy, json
-from urllib.request import urlopen
+import re, os, csv, copy, json, operator
 import preprocess as pp
-from textblob import TextBlob, Word
-from textblob.sentiments import NaiveBayesAnalyzer
+from urllib.request import urlopen
+from collections import defaultdict, Counter
 
 
 class TwitchChatParser:
@@ -25,6 +24,7 @@ class TwitchChatParser:
 		self.streamer = streamer
 		self.streamer_emotes = self._get_streamer_emote()
 		self.keyword = copy.copy(keyword)
+		self.co_matrix = defaultdict(lambda : defaultdict(int))
 
 		if dir_path:
 			self._read_log_from_dir(dir_path)
@@ -96,8 +96,46 @@ class TwitchChatParser:
 					utterance = " ".join(u)
 					self.utterances.append([utterance])
 				else: # store "tokenized" utterances
-					self.utterances.append([pp.tokenization(match.group(7), lowercase=True, remove_stops=True, no_repeated_term=True, remove_repeated_letter=True)])
+					tokens = [pp.tokenization(match.group(7), lowercase=True, remove_stops=True, no_repeated_term=False, remove_repeated_letter=True)]
+					self.utterances.append(tokens)
+					# self.co_occurrence(tokens)
 			
+	def co_occurrence_matrix(self, tokens):
+		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
+		# Also, we don’t count the same term pair twice, e.g. co_matrix[A][B] == co_matrix[B][A]
+		# EX: co_matrix['bronze'] =  defaultdict(int, {'chat': 2, 'four': 72, 'kickman': 2, 'lol': 2, 'lp': 2, 'lul': 74, 'vannie': 30, 'w': 2})
+		# 	  the utteranes that contains 'bronze' has been seen the 'chat' term twice and 'four' term 72 times...
+		for u in text_parser.utterances:
+		    if len(u[0]) > 0:
+		        for i in range(len(u[0])-1):            
+		            for j in range(i+1, len(u[0])):
+		                w1, w2 = sorted([u[0][i], u[0][j]]) 
+		                if w1 != w2:
+		                    self.co_matrix[w1][w2] += 1
+		return self.co_matrix
+		
+	def most_common_cooccurrent_terms(self, n=5):
+		com_max = []
+		# For each term, look for the most common co-occurrent terms
+		for t1 in self.co_matrix:
+		    t1_max_terms = sorted(self.co_matrix[t1].items(), key=operator.itemgetter(1), reverse=True)[:5]
+		    for t2, t2_count in t1_max_terms:
+		        com_max.append(((t1, t2), t2_count))
+		# Get the most frequent co-occurrences
+		terms_max = sorted(com_max, key=operator.itemgetter(1), reverse=True)
+		if n <= len(terms_max):
+			print(terms_max[:n])
+		else:
+			print(terms_max[:])
+
+	def most_common_words(self, n=5):
+		count_all = Counter()
+		for utterance in self.utterances:
+			# Update the counter
+			count_all.update(utterance[0])
+		# Print the first 5 most frequent words
+		print(count_all.most_common(n))
+
 	def set_content(self):
 		print("[+] Setting content type for each utterance...")
 		for i in range(len(self.utterances)):
@@ -227,13 +265,5 @@ class TwitchChatParser:
 			else:
 				self.utterances[i].append('2')
 		
-		
 
-# # dictionary = corpora.Dictionary(texts)
-# # corpus = [dictionary.doc2bow(text) for text in texts]
-# # # for co in corpus:
-# # # 	print(co)
-
-# # ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=10, id2word = dictionary, passes=20)
-# # # print(ldamodel.print_topics(num_topics=10, num_words=5),)
 			

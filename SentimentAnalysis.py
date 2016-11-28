@@ -1,83 +1,71 @@
-from textblob import TextBlob
-from textblob.sentiments import NaiveBayesAnalyzer
+import os, random
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn import svm
+from sklearn.metrics import classification_report
 
 
-class SentimentAnalyzer():
+class BaseClassifier:
+
 	def __init__(self):
-		self.training_data = []
-		self.emo_only_data = []
-		self.emo_only_index = []
-		self.cleaned_data = []
+		self.train_data = []
+		self.train_labels = []
+		self.test_data = []
+		self.test_labels = []
 
-	def _text_sentiment_analysis(self, text, index):
-		blob = TextBlob(text, analyzer=NaiveBayesAnalyzer())
-		print("finished #"+str(index)+" :["+text+"]")
-		if blob.sentiment.p_pos > 0.5:
-			return 1
-		elif blob.sentiment.p_pos == 0.5:
-			return 0
-		else:
-			return -1
+	def load_data_from_dir(self, data_dir):
+		data = []
+		for curr_class in self.classes:
+			dirname = os.path.join(data_dir, curr_class)
+			for fname in os.listdir(dirname):
+				with open(os.path.join(dirname, fname), 'r') as f:
+					content = f.read()
+					data.append((content, curr_class))
 
-	def set_sentiment(self, text_parser):
-		print("[+] Starting sentiment analysis... Total: %d" % len(text_parser.utterances))
-		emo_list = [emo[0] for emo in text_parser.emotes]
-		for i in range(len(text_parser.utterances)):
-			str = text_parser.clean_up(text_parser.utterances[i][0])
-			self.cleaned_data.append(str)
-			if str: # str is not empty
-				__type = text_parser.emo_related_check(str)
-				emo_score = 0
-				if __type == 2: # only emo in the text
-					for w in str.split():
-						if w.lower() in emo_list:
-							emo_score += text_parser.get_emote_score(w)
-					if emo_score == 0: # netural
-						text_parser.utterances[i].append(0)
-					elif emo_score > 0: # positive
-						text_parser.utterances[i].append(1)
-					else: # negative
-						text_parser.utterances[i].append(-1)
-					self.emo_only_data.append(str)
-					self.emo_only_index.append(1)
-				elif __type == 1: # 1: emo related 
-					new_str = "" # store the text without emo
-					for w in str.strip().split():
-						if w.lower() in emo_list:
-							emo_score += text_parser.get_emote_score(w)
-						else:
-							new_str += w + " "
-					new_str = new_str.strip()
-					if emo_score == 0: # emote does not impact on text sentiment
-						text_score = text_parser.common_text_check(new_str)
-						if text_score > 0:
-							text_parser.utterances[i].append(1)
-						elif text_score < 0:
-							text_parser.utterances[i].append(-1)
-						else:
-							# s = self._text_sentiment_analysis(new_str, i)
-							s = 0
-							text_parser.utterances[i].append(s)
-					elif emo_score > 0:
-						text_parser.utterances[i].append(1)
-					else:
-						text_parser.utterances[i].append(-1)
-					self.training_data.append(new_str)
-					self.emo_only_index.append(0)
-				else: # 0: no emotes in text
-					str = str.strip()
-					text_score = text_parser.common_text_check(str)
-					if text_score > 0:
-						text_parser.utterances[i].append(1)
-					elif text_score < 0:
-						text_parser.utterances[i].append(-1)
-					else:
-						# s = self._text_sentiment_analysis(str, i)
-						s = 0
-						text_parser.utterances[i].append(s)
-					self.training_data.append(str)
-					self.emo_only_index.append(0)
-			else: # str is empty
-				text_parser.utterances[i].append(0)
-				self.emo_only_index.append(0)
-			
+		random.shuffle(data)
+		length = int(len(data)*0.9)
+
+		self.train_data = [data[0] for data in data[:length]]
+		self.train_labels = [data[1] for data in data[:length]]
+		self.test_data = [data[0] for data in data[length:]]
+		self.test_labels = [data[1] for data in data[length:]]
+
+	def load_data(self, dataset):
+		
+
+
+class LinearSVCClassifier(BaseClassifier):
+	# Linear Support Vector Classification
+	# Similar to SVC with parameter kernel=’linear’, but implemented in terms of liblinear 
+	# rather than libsvm, so it has more flexibility in the choice of penalties and loss 
+	# functions and should scale better to large numbers of samples.
+
+	def __init__(self, classes=['pos', 'neg']):
+		super().__init__()
+		self.classes = classes
+		self.classifier = None
+		self.vectorizer = TfidfVectorizer(min_df=1,
+										  max_df = 0.8,
+										  sublinear_tf=True,
+										  use_idf=True)
+
+	def classification(self):
+		self.classifier = svm.LinearSVC()
+		train_vectors = self.vectorizer.fit_transform(self.train_data)
+		self.classifier.fit(train_vectors, self.train_labels)
+		return self.classifier
+
+	def classification_report(self):
+		test_vectors = self.vectorizer.transform(self.test_data)
+		predicted = self.classifier.predict(test_vectors)
+		print(classification_report(self.test_labels, predicted))
+
+	def predict(self, data):
+		# Transform data into np.array form
+		test_vectors = self.vectorizer.transform(data)
+		predicted = self.classifier.predict(test_vectors)
+
+		for item, labels in zip(data, predicted):
+			print('%s => %s' % (item, labels))
+
+
+		

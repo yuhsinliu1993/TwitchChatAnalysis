@@ -11,7 +11,6 @@ class BaseModel:
 	
 	stemmer = SnowballStemmer("english")
 	
-
 	def __init__(self, data):
 		self.data = copy.copy(data)
 		self.totalvocab_stemmed = []
