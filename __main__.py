@@ -15,7 +15,7 @@ def main(**kwargs):
 
 	from ChatLogParser import TwitchChatParser
 	from TopicModeling import LDAModeling
-	from SentimentAnalysis import LinearSVCClassifier
+	from SentimentAnalysis import SentimentAnalyzer
 
 	if kwargs['num_topics']:
 		num_topics = kwargs['num_topics']
@@ -29,11 +29,10 @@ def main(**kwargs):
 	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
 	text_parser.update_emotes_by_csv('sub_emotes.csv')
 	text_parser.update_emotes_by_csv('global_emotes.csv')
-	text_parser.set_content()
+	# text_parser.set_content()
 	        
 	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
-	sentier = LinearSVCClassifier()
-	sentier.load_data(dir=DIR+'/review_polarity/reviews')
+	sentier = SentimentAnalyzer()
 	sentier.set_sentiment(text_parser)
 
 	# ==== Topic Modeling ====

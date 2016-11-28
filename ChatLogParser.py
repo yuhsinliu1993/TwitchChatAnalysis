@@ -25,6 +25,7 @@ class TwitchChatParser:
 		self.streamer_emotes = self._get_streamer_emote()
 		self.keyword = copy.copy(keyword)
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
+		self.count_all = Counter()
 
 		if dir_path:
 			self._read_log_from_dir(dir_path)
@@ -96,9 +97,9 @@ class TwitchChatParser:
 					utterance = " ".join(u)
 					self.utterances.append([utterance])
 				else: # store "tokenized" utterances
-					tokens = [pp.tokenization(match.group(7), lowercase=True, remove_stops=True, no_repeated_term=False, remove_repeated_letter=True)]
-					self.utterances.append(tokens)
-					# self.co_occurrence(tokens)
+					tokens = pp.tokenization(match.group(7), lowercase=True, remove_stops=True, no_repeated_term=False, remove_repeated_letter=True)
+					self.utterances.append([tokens])
+					self.count_all.update(tokens)
 			
 	def co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
@@ -129,12 +130,7 @@ class TwitchChatParser:
 			print(terms_max[:])
 
 	def most_common_words(self, n=5):
-		count_all = Counter()
-		for utterance in self.utterances:
-			# Update the counter
-			count_all.update(utterance[0])
-		# Print the first 5 most frequent words
-		print(count_all.most_common(n))
+		print(self.count_all.most_common(n))
 
 	def set_content(self):
 		print("[+] Setting content type for each utterance...")
