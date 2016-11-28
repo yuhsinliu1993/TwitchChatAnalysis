@@ -100,12 +100,12 @@ class TwitchChatParser:
 					self.utterances.append(tokens)
 					# self.co_occurrence(tokens)
 			
-	def co_occurrence_matrix(self, tokens):
+	def co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
 		# Also, we don’t count the same term pair twice, e.g. co_matrix[A][B] == co_matrix[B][A]
 		# EX: co_matrix['bronze'] =  defaultdict(int, {'chat': 2, 'four': 72, 'kickman': 2, 'lol': 2, 'lp': 2, 'lul': 74, 'vannie': 30, 'w': 2})
 		# 	  the utteranes that contains 'bronze' has been seen the 'chat' term twice and 'four' term 72 times...
-		for u in text_parser.utterances:
+		for u in self.utterances:
 		    if len(u[0]) > 0:
 		        for i in range(len(u[0])-1):            
 		            for j in range(i+1, len(u[0])):
