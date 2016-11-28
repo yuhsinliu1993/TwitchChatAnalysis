@@ -1,14 +1,66 @@
+import string, re, langid, itertools
 from langid.langid import LanguageIdentifier, model
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from stop_words import get_stop_words
-import string, re, langid, itertools
 from collections import Counter
 
 tokenizer = RegexpTokenizer(r'\w+')
-en_stop = get_stop_words('en')
+stop = get_stop_words('en') + list(string.punctuation) + ['via'] 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
+emoticons_str = r"""
+                (?:
+                    [:=;] # Eyes
+                    [oO\-]? # Nose (optional)
+                    [D\)\]\(\]/\\OpP] # Mouth
+                )"""
+
+regex_str = [
+    emoticons_str,
+    r'<[^>]+>', # HTML tags
+    r'(?:@[\w_]+)', # @-mentions
+    r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)", # hash-tags
+    r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+    r'(?:(?:\d+,?)+(?:\.?\d+)?)', # numbers
+    r"(?:[a-z][a-z'\-_]+[a-z])", # words with - and '
+    r'(?:[\w_]+)', # other words
+    r'(?:\S)' # anything else
+]
+
+tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
+emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
+
+def tokenization(str, lowercase=False, remove_stops=False, no_repeated_term=False, remove_repeated_letter=False):
+    tokens = tokens_re.findall(str)
+    if lowercase:
+        tokens = [token if emoticon_re.search(token) else token.lower() for token in tokens]
+
+    if remove_stops:
+        tokens = [token for token in tokens if token not in stop]
+
+    if no_repeated_term:
+        tokens = list(set(tokens))
+
+    if remove_repeated_letter:    
+        tokens = [re.sub(r'(.)\1+', r'\1\1', token) for token in tokens]
+
+    return tokens
+
+def count_data(documents):
+    count_all = Counter()
+    for doc in documents:
+        # Create a list with all the terms
+        terms_all = [term for term in tokenization(doc[0])]
+        # Update the counter
+        count_all.update(terms_all)
+    # Print the first 5 most frequent words
+    print(count_all.most_common(5))
+
+def remove_stops(word_list):
+    terms_stop = [term for term in tokenization(word_list) if term not in stop]
+
 
 # Use langid module to classify the language to make sure we are applying the correct cleanup actions for English
 def check_lang(str):

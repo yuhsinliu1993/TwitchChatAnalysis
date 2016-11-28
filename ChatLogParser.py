@@ -1,6 +1,6 @@
 import re, os, csv, copy, json
 from urllib.request import urlopen
-import preprocess
+import preprocess as pp
 from textblob import TextBlob, Word
 from textblob.sentiments import NaiveBayesAnalyzer
 
@@ -12,7 +12,7 @@ class TwitchChatParser:
 	common_pos = ['lul', 'lol', 'imao', 'xd', 'gg', 'ggwp']
 	common_neg = ['rekt', 'wtf', 'fuck', 'nigger', 'rip']
 
-	def __init__(self, streamer, spell_check=False, dir_path=None, filename=None, keyword=None):
+	def __init__(self, streamer, dir_path=None, filename=None, keyword=None, spell_check=False):
 		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
 		self.data = []			
 		# [[(utterance), (content), (topic), (related), (sentiment)], [...], ...]
@@ -22,7 +22,6 @@ class TwitchChatParser:
 		self.texts = []
 		self.emotes = []
 		self.ref_time = 0
-		self.spell_check = spell_check
 		self.streamer = streamer
 		self.streamer_emotes = self._get_streamer_emote()
 		self.keyword = copy.copy(keyword)
@@ -31,10 +30,9 @@ class TwitchChatParser:
 			self._read_log_from_dir(dir_path)
 		elif filename:
 			self._read_from_file(filename)
-		else:
-			# raise an error
+		else: # raise an error
 			pass
-		self._parsing()
+		self._parsing(spell_check)
 
 	def _read_log_from_dir(self, dir_path):
 		for fn in os.listdir(dir_path):
@@ -75,7 +73,7 @@ class TwitchChatParser:
 			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
-	def _parsing(self):
+	def _parsing(self, spell_check):
 		set_ref_time = 0
 		for line in self.data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
@@ -84,10 +82,11 @@ class TwitchChatParser:
 				if not set_ref_time:
 					self.ref_time = (int(match.group(1))+int(match.group(2)))*60 + int(match.group(3))
 					set_ref_time = 1
+				
 				self.user_lists.append(match.group(4))
 				self.time.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.ref_time)
 				
-				if self.spell_check:
+				if spell_check:
 					u = []
 					for w in match.group(7).split():
 						result = Word(w).spellcheck()
@@ -96,8 +95,8 @@ class TwitchChatParser:
 						u.append(w)
 					utterance = " ".join(u)
 					self.utterances.append([utterance])
-				else:	
-					self.utterances.append([match.group(7)])
+				else: # store "tokenized" utterances
+					self.utterances.append([pp.tokenization(match.group(7), lowercase=True, remove_stops=True, no_repeated_term=True, remove_repeated_letter=True)])
 			
 	def set_content(self):
 		print("[+] Setting content type for each utterance...")
@@ -131,7 +130,8 @@ class TwitchChatParser:
 		# Conversation
 		return '1'
 
-	def clean_up(self, str):
+
+	def clean_up(self, str): # called in 'SentimentAnalysis'
 		# NOTE: Only deal with english utterance right now
 		if preprocess.check_lang(str) == 'en':
 			str = preprocess.remove_emoji(str)
