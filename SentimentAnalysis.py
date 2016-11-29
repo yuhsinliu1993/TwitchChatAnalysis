@@ -3,6 +3,7 @@ from textblob.sentiments import NaiveBayesAnalyzer
 
 
 class SentimentAnalyzer():
+	
 	def __init__(self):
 		self.training_data = []
 		self.emo_only_data = []

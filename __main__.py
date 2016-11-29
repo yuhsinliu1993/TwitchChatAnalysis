@@ -5,6 +5,7 @@ def _get_kwargs():
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")
 	parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
 	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
 	return vars(parser.parse_args())
 
 
@@ -22,21 +23,27 @@ def main(**kwargs):
 	else:
 		num_topics = 10
 
+	# ==== Settings ====
 	DIR = os.path.abspath('')
 	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
+	emote_files = ['sub_emotes.csv', 'global_emotes.csv']
+	keywords = kwargs['keywords'] + [kwargs['streamer']]
+	if kwargs['game']:
+		keywords += [kwargs['game']]
+	
 
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
-	text_parser.update_emotes_by_csv('sub_emotes.csv')
-	text_parser.update_emotes_by_csv('global_emotes.csv')
-	# text_parser.set_content()
+	text_parser.update_emotes(emote_files)
+	text_parser.set_content(keyword_list=keywords)
+
 	        
 	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
 	sentier = SentimentAnalyzer()
 	sentier.set_sentiment(text_parser)
 
-	# ==== Topic Modeling ====
 	
+	# ==== Topic Modeling ====
 	topic_parser = LDAModeling(training_data=sentier.training_data, num_topics=num_topics)
 	topic_parser.build_lda_model()
 

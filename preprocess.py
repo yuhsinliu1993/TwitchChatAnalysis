@@ -6,7 +6,7 @@ from nltk import pos_tag
 from stop_words import get_stop_words
 
 tokenizer = RegexpTokenizer(r'\w+')
-stop = get_stop_words('en') + list(string.punctuation) + ['via', 'im'] 
+stops = get_stop_words('en') + list(string.punctuation) + ['via', 'im'] 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 emoticons_str = r"""
@@ -32,25 +32,21 @@ tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
 
 
-def tokenization(str, lowercase=False, remove_stops=False, no_repeated_term=False, remove_repeated_letter=False):
+def tokenization(str, lowercase=False, no_repeated_term=False, remove_repeated_letters=False):
 	tokens = tokens_re.findall(str)
 	if lowercase:
 		tokens = [token if emoticon_re.search(token) else token.lower() for token in tokens]
 
-	if remove_stops:
-		tokens = [token for token in tokens if token not in stop]
-
 	if no_repeated_term:
 		tokens = list(set(tokens))
 
-	if remove_repeated_letter:    
+	if remove_repeated_letters:    
 		tokens = [re.sub(r'(.)\1+', r'\1\1', token) for token in tokens]
 
 	return tokens
 
-
-def remove_stops(word_list):
-	terms_stop = [term for term in tokenization(word_list) if term not in stop]
+def remove_stops(tokens):
+	return [token for token in tokens if token not in stops] 
 
 
 # Use langid module to classify the language to make sure we are applying the correct cleanup actions for English
@@ -61,24 +57,6 @@ def check_lang(str):
 	else:
 		language = 'en'
 	return language
-
-
-# stop words usually refer to the most common words in a language
-# reduce dimensionality
-def remove_stops(str):
-	list_pos = 0
-	cleaned_str = ''
-	text = str.split()
-	# text = tokenizer.tokenize(str)
-	for word in text:
-		if word.lower() not in en_stop:
-			# rebuild cleaned_str
-			if list_pos == 0:
-				cleaned_str = word
-			else:
-				cleaned_str = cleaned_str + ' ' + word
-			list_pos += 1
-	return cleaned_str
 
 def remove_emoji(str):
 	if str:
