@@ -1,0 +1,9 @@
+CURRENT_DIR:
+  /Users/Michaeliu/Twitch
+
+STREAMER_DIR:
+  /Users/Michaeliu/Twitch/streamer
+
+emote_files:
+  - sub_emotes.csv
+  - global_emotes.csv

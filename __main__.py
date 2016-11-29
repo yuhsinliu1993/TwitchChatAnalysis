@@ -1,11 +1,11 @@
-import argparse, os
+import argparse, os, yaml
 
 def _get_kwargs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")
-	parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
-	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
-	parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
+	# parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
+	# parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	# parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
 	return vars(parser.parse_args())
 
 
@@ -18,24 +18,24 @@ def main(**kwargs):
 	from TopicModeling import LDAModeling
 	from SentimentAnalysis import SentimentAnalyzer
 
-	if kwargs['num_topics']:
-		num_topics = kwargs['num_topics']
-	else:
-		num_topics = 10
 
 	# ==== Settings ====
-	DIR = os.path.abspath('')
-	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
-	emote_files = ['sub_emotes.csv', 'global_emotes.csv']
-	keywords = kwargs['keywords'] + [kwargs['streamer']]
-	if kwargs['game']:
-		keywords += [kwargs['game']]
-	
+	with open('global.yaml', 'r') as f:
+		_global = yaml.load(f)
 
+	streamer = kwargs['streamer']
+	s_yaml = _global['STREAMER_DIR'] + '/' + streamer + '/' + local + '.yaml'
+
+	with open(s_yaml, 'r') as f:
+		_local = yaml.load(f)
+
+	print(_local)
+	quit()
+	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
-	text_parser.update_emotes(emote_files)
-	text_parser.set_content(keyword_list=keywords)
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['log_dir'])
+	text_parser.update_emotes(_global['emote_files'])
+	text_parser.set_content(keyword_list=_local['keywords'])
 
 	        
 	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
