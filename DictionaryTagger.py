@@ -1,9 +1,10 @@
-import yaml 
+import yaml, os
 
 class DictionaryTagger(object):
 
-	def __init__(self, dictionary_paths):
-		files = [open(path, 'r') for path in dictionary_paths]
+	def __init__(self, yaml_dir):
+		
+		files = [open(os.path.join(path), 'r') for fn in os.listdir(yaml_dir)]
 		dictionaries = [yaml.load(dict_file) for dict_file in files]
 		map(lambda x: x.close(), files)
 		

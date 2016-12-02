@@ -62,7 +62,7 @@ class TwitchChatParser:
 				self.logfile_info[fn]['count_tokens'] = Counter()
 
 				with open(os.path.join(dir_path, fn), "r") as f:
-					print("[*] Loading the log file '%s'..." % fn)
+					print("[*] Loading the log file: '%s'..." % fn)
 					for line in f:
 						data.append(line)
 				
@@ -156,7 +156,7 @@ class TwitchChatParser:
 		# for i in range(len(self.token_lists)):
 		# 	content = self._set_content(self.token_lists[i][0], i, keywords, spam_threshold)
 		# 	self.token_lists[i].append(content)
-			print("[*] '%s' content setting finished! " % fn)
+			print("[*] '%s' content setting finished ! " % fn)
 
 	# 1: normal conversation, 2: Question, 3: Spam, 4: keyword-based text, 5: emote only, 6: Command and Bot
 	def _set_content(self, tokens, index, keywords, spam_threshold):
@@ -249,10 +249,10 @@ class TwitchChatParser:
 	# 							 })
 
 
-	def _update_emotes(self, file_list): 
+	def _update_emotes(self, emote_dir): 
 		# store "lower-case" emotion and its emo-score
-		for file in file_list:
-			with open(file, 'r') as f:
+		for fn in os.listdir(emote_dir):
+			with open(os.path.join(emote_dir, fn), 'r') as f:
 				reader = csv.reader(f)
 				emotes = list(reader)
 				for emo in emotes[1:]:
@@ -312,7 +312,7 @@ class TwitchChatParser:
 					self.logfile_info[fn]['token_lists'][i].append(score)
 				else:
 					self.logfile_info[fn]['token_lists'][i].append(0)
-			print("[*] '%s' sentiment analysis setting finished!" % fn)
+			print("[*] '%s' sentiment analysis setting finished !" % fn)
 
 	def _save_cleaned_log(self, output_dir):
 		for fn in self.logfile_info.keys():

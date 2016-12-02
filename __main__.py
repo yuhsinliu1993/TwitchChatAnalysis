@@ -32,10 +32,10 @@ def main(**kwargs):
 
 	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_files=_global['emote_files'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_files=_global['emotefilesDir'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
 	
-	text_parser.dictionary_tagger(_global['sentiment_files'])  # Prepare for sentiment analysis
+	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Prepare for sentiment analysis
 	text_parser.sentiment_analysis()
 	# text_parser.save_cleaned_log(_local['streamDir']+'/cleaned_logs') # We save the cleaned log file that contains all lowercase-letters, remove stop_words, remove repeated letters in word, remove punctuations
 	
