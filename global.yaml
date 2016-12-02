@@ -7,3 +7,14 @@ STREAMER_DIR:
 emote_files:
   - sub_emotes.csv
   - global_emotes.csv
+
+sentiment_files:
+  - positive.yaml
+  - negative.yaml
+  - inc.yaml
+  - dec.yaml
+  - inverter.yaml
+
+num_topics: 20
+
+spam_threshold: 5

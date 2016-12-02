@@ -1,8 +1,10 @@
 import re, os, csv, copy, json, operator
-import preprocess as pp
+from Preprocess import Preprocessor
 from urllib.request import urlopen
 from collections import defaultdict, Counter
 from nltk.util import ngrams
+from SentimentAnalysis import SentimentAnalyzer
+from DictionaryTagger import DictionaryTagger
 
 
 class TwitchChatParser:
@@ -13,20 +15,26 @@ class TwitchChatParser:
 	common_pos = ['lul', 'lol', 'imao', 'xd', 'gg', 'ggwp']
 	common_neg = ['rekt', 'wtf', 'fuck', 'nigger', 'rip']
 
-	def __init__(self, streamer, dir_path=None, filename=None, keyword=None, spell_check=False):
-		# ["[08:04:19] <NiceBackHair> SMOrc I like to hit face too", "..."]
-		self.data = []			
-		# [[[list of tokens], (content), (topic), (related), (sentiment)], [...], ...]
+	def __init__(self, streamer, emote_files, dir_path=None, filename=None, keyword=None, spell_check=False):
+		"""	
+			Each element in "token_lists" is a tuple of four elements: 
+				- token 
+				- token's lemma (a generalized version of the word)
+				- a list of associated tags
+				- property
+		"""
 		self.token_lists = []
+		self.utterances = []
+		self.data = []
 		self.user_lists = []
 		self.time = []
 		self.emotes = []
 		self.ref_time = 0
 		self.streamer = streamer
 		self.streamer_emotes = self._get_streamer_emote()
-		self.keyword = copy.copy(keyword)
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
 		self.count_tokens = Counter()
+		self.preprocess = Preprocessor()
 
 		if dir_path:
 			self._read_log_from_dir(dir_path)
@@ -34,7 +42,8 @@ class TwitchChatParser:
 			self._read_from_file(filename)
 		else: # raise an error
 			pass
-		
+
+		self._update_emotes(emote_files)
 		self._parsing()
 		self._co_occurrence_matrix()
 
@@ -89,20 +98,10 @@ class TwitchChatParser:
 				
 				self.user_lists.append(match.group(4))
 				self.time.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.ref_time)
-				
-				if spell_check:
-					u = []
-					for w in match.group(7).split():
-						result = Word(w).spellcheck()
-						if result[0][1] >= 0.8:
-							w = result[0][0]
-						u.append(w)
-					utterance = " ".join(u)
-					self.token_lists.append([utterance])
-				else: # store "tokenized" utterances
-					tokens = pp.tokenization(match.group(7), lowercase=True, no_repeated_term=False, remove_repeated_letters=True)
-					self.token_lists.append([tokens])
-					self.count_tokens.update(tokens)
+				self.utterances.append(match.group(7))
+				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes])
+				self.token_lists.append([self.preprocess.tag_and_lemma(tokens_p)])
+				self.count_tokens.update([token for (token, p) in tokens_p])
 			
 	def _co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
@@ -113,7 +112,7 @@ class TwitchChatParser:
 		    if len(u[0]) > 0:
 		        for i in range(len(u[0])-1):            
 		            for j in range(i+1, len(u[0])):
-		                w1, w2 = sorted([u[0][i], u[0][j]]) 
+		                w1, w2 = sorted([u[0][i][0], u[0][j][0]]) 
 		                if w1 != w2:
 		                    self.co_matrix[w1][w2] += 1
 		
@@ -133,50 +132,54 @@ class TwitchChatParser:
 
 	def most_common_words(self, n=5):
 		print(self.count_tokens.most_common(n))
+		return self.count_tokens.most_common(n)
 
-	def set_content(self, keyword_list, spam_threshold=5):
+	def set_content(self, keywords, spam_threshold=5):
 		for i in range(len(self.token_lists)):
-			content = self._set_content(self.token_lists[i][0], i, keyword_list, spam_threshold)
+			content = self._set_content(self.token_lists[i][0], i, keywords, spam_threshold)
 			self.token_lists[i].append(content)
 		print("[*] contents setting finished !")
 
 	# 1: normal conversation, 2: Question, 3: Spam, 4: keyword-based text, 5: emote only, 6: Command and Bot
-	def _set_content(self, tokens, index, keyword_list, spam_threshold): # utterance is a list
-		if tokens[0] == '!' or '^' in self.user_lists[index]:
-			return '6'
+	def _set_content(self, tokens, index, keywords, spam_threshold):
+		if len(tokens) > 0:
+			for token in tokens:
+				if token[-1] == 'COMMAND':
+					return '6'
 
-		# Check keyword_list first
-		emo_count = 0
-		no_emo_tokens = []
-		for token in tokens:
-			if token in self.emotes:
-				emo_count += 1
-			else:
-				if token in keyword_list:
+			# Check keywords first
+			emo_only = 1
+			no_emo_tokens = []
+			for token in tokens:
+				if token[-1] != 'EMOTICON':
+					no_emo_tokens = token[0]
+					emo_only = 0 
+			
+			if emo_only == 1:
+				return '5'
+
+			for token in tokens:
+				if token[0] in keywords:
 					return '4'
-				no_emo_tokens.append(token)
+		
+			# Check Spam (not count emotes)
+			spam_check = defaultdict(int)
+			for t in no_emo_tokens:
+				spam_check[t] += 1
 
-		# Check emote only
-		if emo_count == len(tokens):
-			return '5'
+			for key in spam_check.keys():
+				if spam_check[key] >= spam_threshold:
+					return '3'
+			
+			# Question [NEED TO FIX]
+			tokens = [token[0] for token in tokens]
+			for token in tokens:
+				if token in self.inquery:
+					return '2'
 
-		# Check Spam (not count emotes)
-		spam_check = defaultdict(int)
-		for token in no_emo_tokens:
-			spam_check[token] += 1
-
-		for key in spam_check.keys():
-			if spam_check[key] >= spam_threshold:
-				return '3'
-
-		# Question [NEED TO FIX]
-		for token in tokens:
-			if token in self.inquery:
-				return '2'
-
-		for bigram in ngrams(tokens, 2):
-			if ' '.join(bigram) in self.bi_inquery:
-				return '2'
+			for bigram in ngrams(tokens, 2):
+				if ' '.join(bigram) in self.bi_inquery:
+					return '2'
 
 		return '1'
 
@@ -224,10 +227,11 @@ class TwitchChatParser:
 								 'related': self.token_lists[i][4],
 								 'emotion': str(self.token_lists[i][2]),
 								 'content': self.token_lists[i][1],
-								 'comment': self.token_lists[i][0]
+								 'comment': self.utterances[i]
 								 })
 
-	def update_emotes(self, file_list): 
+
+	def _update_emotes(self, file_list): 
 		# store "lower-case" emotion and its emo-score
 		for file in file_list:
 			with open(file, 'r') as f:
@@ -261,7 +265,6 @@ class TwitchChatParser:
 		return score
 
 	def set_relation(self, topics_dict, threshold):
-		print("[+] Setting relation for each utterance...")
 		total_score = 0
 		for i in range(len(self.token_lists)):
 			score = 0
@@ -276,3 +279,18 @@ class TwitchChatParser:
 			else:
 				self.token_lists[i].append('2')
 		
+	def dictionary_tagger(self, sentiment_files):
+		tagger = DictionaryTagger(sentiment_files)
+		self.token_lists = tagger.tag(self.token_lists)
+
+	def sentiment_analysis(self):
+		sentiment_analyer = SentimentAnalyzer()
+		for i in range(len(self.token_lists)):
+			if len(self.token_lists[i][0]) > 0:
+				score = sentiment_analyer.sentiment_score(self.token_lists[i][0])
+				self.token_lists[i].append(score)
+			else:
+				self.token_lists[i].append(0)
+		print("[*] Sentiment setting finished !")
+
+

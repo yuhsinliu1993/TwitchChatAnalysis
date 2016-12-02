@@ -1,4 +1,4 @@
-**Twitch Chatting Log Analysis**
+#Twitch Chatting Log Analysis
 
 - Before start
    - Required python package

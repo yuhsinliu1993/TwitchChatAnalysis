@@ -16,6 +16,7 @@ def main(**kwargs):
 
 	from ChatLogParser import TwitchChatParser
 	from TopicModeling import LDAModeling
+	from DictionaryTagger import DictionaryTagger
 	from SentimentAnalysis import SentimentAnalyzer
 
 
@@ -24,25 +25,19 @@ def main(**kwargs):
 		_global = yaml.load(f)
 
 	streamer = kwargs['streamer']
-	s_yaml = _global['STREAMER_DIR'] + '/' + streamer + '/' + local + '.yaml'
+	s_yaml = _global['STREAMER_DIR'] + '/' + streamer + '/' + 'local' + '.yaml'
 
 	with open(s_yaml, 'r') as f:
 		_local = yaml.load(f)
 
-	print(_local)
-	quit()
 	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['log_dir'])
-	text_parser.update_emotes(_global['emote_files'])
-	text_parser.set_content(keyword_list=_local['keywords'])
-
-	        
-	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
-	sentier = SentimentAnalyzer()
-	sentier.set_sentiment(text_parser)
-
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['log_dir'], emote_files=_global['emote_files'])
+	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
+	text_parser.dictionary_tagger(_global['sentiment_files'])  # 
+	text_parser.sentiment_analysis()
 	
+
 	# ==== Topic Modeling ====
 	topic_parser = LDAModeling(training_data=sentier.training_data, num_topics=num_topics)
 	topic_parser.build_lda_model()
@@ -57,6 +52,8 @@ def main(**kwargs):
 
 	# ==== Assign topic for each utterance ====
 	topics_dict = topic_parser.set_topics(text_parser, sentier.emo_only_index)
+    
+	
 
 	# ==== Cal score of relation for each utterance ====
 	text_parser.set_relation(topics_dict, 0.05)
