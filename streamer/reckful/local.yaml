@@ -2,7 +2,7 @@ streamer: reckful
 
 playing: hearthstone
 
-streamDir: /Users/Michaeliu/Twitch/streamer/reckful
+streamerDir: /Users/Michaeliu/Twitch/streamer/reckful
 
 logDir: /Users/Michaeliu/Twitch/streamer/reckful/log
 

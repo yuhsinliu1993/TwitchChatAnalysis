@@ -25,23 +25,24 @@ def main(**kwargs):
 		_global = yaml.load(f)
 
 	streamer = kwargs['streamer']
-	s_yaml = _global['STREAMER_DIR'] + '/' + streamer + '/' + 'local' + '.yaml'
+	streamerDir = os.path.join(_global['STREAMER_DIR'], streamer)
 
-	with open(s_yaml, 'r') as f:
+	with open(os.path.join(streamerDir, 'local.yaml'), 'r') as f:
 		_local = yaml.load(f)
 
 	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['logDir'], emote_files=_global['emote_files'])
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_files=_global['emote_files'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
-	text_parser.dictionary_tagger(_global['sentiment_files'])  # 
+	
+	text_parser.dictionary_tagger(_global['sentiment_files'])  # Prepare for sentiment analysis
 	text_parser.sentiment_analysis()
-	text_parser.save_cleaned_log(_local['streamDir']+'/cleaned_logs') # We save the cleaned log file that contains all lowercase-letters, remove stop_words, remove repeated letters in word, remove punctuations
+	# text_parser.save_cleaned_log(_local['streamDir']+'/cleaned_logs') # We save the cleaned log file that contains all lowercase-letters, remove stop_words, remove repeated letters in word, remove punctuations
 	
 
 	# ==== Bursty Biterm Topic Modeling ====
-	biterm = BBTM(_local['streamDir']+'/cleaned_logs', _local['streamDir']+'/output')
-	biterm.indeXing()
+	biterm = BBTM()
+	biterm.indeXing(_local['streamDir']+'/cleaned_logs_dir', _local['streamDir']+'/output')
 
 	# [RPOBLEM 1 - Topic Modeling ]
 	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 

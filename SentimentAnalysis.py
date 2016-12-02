@@ -1,16 +1,22 @@
+import copy
 from textblob import TextBlob
 from textblob.sentiments import NaiveBayesAnalyzer
 
 
 class SentimentAnalyzer():
 	
-	def __init__(self):
-		pass
+	def __init__(self, emotes):
+		self.emotes = copy.copy(emotes)
 
-	def value_of(self, sentiment):
-		if sentiment == 'positive': 
+	def check_emote(self, emote):
+		for i in range(len(self.emotes)):
+			if emote == self.emotes[i][0]:
+				return int(self.emotes[i][1])
+
+	def value_of(self, tag):
+		if tag == 'positive': 
 			return 1
-		if sentiment == 'negative': 
+		if tag == 'negative': 
 			return -1
 		return 0
 
@@ -20,7 +26,11 @@ class SentimentAnalyzer():
 		else:
 			current_token = sentence_tokens[0]
 			tags = current_token[2]
-			token_score = sum([self.value_of(tag) for tag in tags])
+			if current_token[-1] == 'EMOTICON':
+				token_score = self.check_emote(current_token[0])
+			else:
+				token_score = sum([self.value_of(tag) for tag in tags])
+			
 			if previous_token is not None:
 				previous_tags = previous_token[2]
 				if 'inc' in previous_tags:
