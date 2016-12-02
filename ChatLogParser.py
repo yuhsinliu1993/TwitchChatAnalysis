@@ -294,3 +294,13 @@ class TwitchChatParser:
 		print("[*] Sentiment setting finished !")
 
 
+	def save_cleaned_log(self, output_dir):
+		fn = output_dir + '/cleaned_log.txt'
+
+		with open(fn, 'w') as f:
+			for sentence in self.token_lists:
+				if len(sentence[0]) > 0:
+					line = ' '.join([tokens[0] for tokens in sentence[0] if tokens[-1] != 'URL'])
+					f.write(line+'\n')
+				
+
