@@ -15,9 +15,9 @@ def main(**kwargs):
 		kwargs = _get_kwargs()
 
 	from ChatLogParser import TwitchChatParser
-	from TopicModeling import LDAModeling
 	from DictionaryTagger import DictionaryTagger
 	from SentimentAnalysis import SentimentAnalyzer
+	from BitermTopicModeling import BBTM
 
 
 	# ==== Settings ====
@@ -32,15 +32,16 @@ def main(**kwargs):
 
 	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['log_dir'], emote_files=_global['emote_files'])
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=_local['logDir'], emote_files=_global['emote_files'])
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
 	text_parser.dictionary_tagger(_global['sentiment_files'])  # 
 	text_parser.sentiment_analysis()
+	text_parser.save_cleaned_log(_local['streamDir']+'/cleaned_logs') # We save the cleaned log file that contains all lowercase-letters, remove stop_words, remove repeated letters in word, remove punctuations
 	
 
-	# ==== Topic Modeling ====
-	topic_parser = LDAModeling(training_data=sentier.training_data, num_topics=num_topics)
-	topic_parser.build_lda_model()
+	# ==== Bursty Biterm Topic Modeling ====
+	biterm = BBTM(_local['streamDir']+'/cleaned_logs', _local['streamDir']+'/output')
+	biterm.indeXing()
 
 	# [RPOBLEM 1 - Topic Modeling ]
 	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 

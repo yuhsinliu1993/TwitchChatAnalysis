@@ -2,7 +2,9 @@ streamer: reckful
 
 playing: hearthstone
 
-log_dir: /Users/Michaeliu/Twitch/streamer/reckful/log
+streamDir: /Users/Michaeliu/Twitch/streamer/reckful
+
+logDir: /Users/Michaeliu/Twitch/streamer/reckful/log
 
 keywords: # the words you want to highlight in the entire log  
   - hearthstone
