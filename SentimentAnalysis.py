@@ -1,71 +1,47 @@
-import os, random
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn import svm
-from sklearn.metrics import classification_report
+import copy
+from textblob import TextBlob
+from textblob.sentiments import NaiveBayesAnalyzer
 
 
-class BaseClassifier:
+class SentimentAnalyzer():
+	
+	def __init__(self, emotes):
+		self.emotes = copy.copy(emotes)
 
-	def __init__(self):
-		self.train_data = []
-		self.train_labels = []
-		self.test_data = []
-		self.test_labels = []
+	def check_emote(self, emote):
+		for i in range(len(self.emotes)):
+			if emote == self.emotes[i][0]:
+				return int(self.emotes[i][1])
 
-	def load_data_from_dir(self, data_dir):
-		data = []
-		for curr_class in self.classes:
-			dirname = os.path.join(data_dir, curr_class)
-			for fname in os.listdir(dirname):
-				with open(os.path.join(dirname, fname), 'r') as f:
-					content = f.read()
-					data.append((content, curr_class))
+	def value_of(self, tag):
+		if tag == 'positive': 
+			return 1
+		if tag == 'negative': 
+			return -1
+		return 0
 
-		random.shuffle(data)
-		length = int(len(data)*0.9)
+	def sentence_score(self, sentence_tokens, previous_token, acum_score):    
+		if not sentence_tokens:
+			return acum_score
+		else:
+			current_token = sentence_tokens[0]
+			tags = current_token[2]
+			if current_token[-1] == 'EMOTICON':
+				token_score = self.check_emote(current_token[0])
+			else:
+				token_score = sum([self.value_of(tag) for tag in tags])
+			
+			if previous_token is not None:
+				previous_tags = previous_token[2]
+				if 'inc' in previous_tags:
+					token_score *= 2.0
+				elif 'dec' in previous_tags:
+					token_score /= 2.0
+				elif 'inv' in previous_tags:
+					token_score *= -1.0
+			return self.sentence_score(sentence_tokens[1:], current_token, acum_score + token_score)
 
-		self.train_data = [data[0] for data in data[:length]]
-		self.train_labels = [data[1] for data in data[:length]]
-		self.test_data = [data[0] for data in data[length:]]
-		self.test_labels = [data[1] for data in data[length:]]
+	def sentiment_score(self, sentence):
+		return sum([self.sentence_score(sentence, None, 0.0)])
 
-	def load_data(self, dataset):
-		
-
-
-class LinearSVCClassifier(BaseClassifier):
-	# Linear Support Vector Classification
-	# Similar to SVC with parameter kernel=’linear’, but implemented in terms of liblinear 
-	# rather than libsvm, so it has more flexibility in the choice of penalties and loss 
-	# functions and should scale better to large numbers of samples.
-
-	def __init__(self, classes=['pos', 'neg']):
-		super().__init__()
-		self.classes = classes
-		self.classifier = None
-		self.vectorizer = TfidfVectorizer(min_df=1,
-										  max_df = 0.8,
-										  sublinear_tf=True,
-										  use_idf=True)
-
-	def classification(self):
-		self.classifier = svm.LinearSVC()
-		train_vectors = self.vectorizer.fit_transform(self.train_data)
-		self.classifier.fit(train_vectors, self.train_labels)
-		return self.classifier
-
-	def classification_report(self):
-		test_vectors = self.vectorizer.transform(self.test_data)
-		predicted = self.classifier.predict(test_vectors)
-		print(classification_report(self.test_labels, predicted))
-
-	def predict(self, data):
-		# Transform data into np.array form
-		test_vectors = self.vectorizer.transform(data)
-		predicted = self.classifier.predict(test_vectors)
-
-		for item, labels in zip(data, predicted):
-			print('%s => %s' % (item, labels))
-
-
-		
+			

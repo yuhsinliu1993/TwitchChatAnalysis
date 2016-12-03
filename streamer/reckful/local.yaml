@@ -1,0 +1,15 @@
+streamer: reckful
+
+playing: hearthstone
+
+streamerDir: /Users/Michaeliu/Twitch/streamer/reckful
+
+logDir: /Users/Michaeliu/Twitch/streamer/reckful/log
+
+keywords: # the words you want to highlight in the entire log  
+  - hearthstone
+  - deck
+  - decklist
+  - reckful
+  - jew
+  - bald

@@ -1,0 +1,15 @@
+CURRENT_DIR:
+  /Users/Michaeliu/Twitch
+
+STREAMER_DIR:
+  /Users/Michaeliu/Twitch/streamer
+
+emotefilesDir:
+  /Users/Michaeliu/Twitch/Emotefiles
+
+sentimentfilesDir:
+  /Users/Michaeliu/Twitch/Sentimentfiles
+
+num_topics: 20
+
+spam_threshold: 5

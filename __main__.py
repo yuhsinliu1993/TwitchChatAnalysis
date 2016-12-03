@@ -1,10 +1,11 @@
-import argparse, os
+import argparse, os, yaml
 
 def _get_kwargs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")
-	parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
-	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	# parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
+	# parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	# parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
 	return vars(parser.parse_args())
 
 
@@ -14,32 +15,34 @@ def main(**kwargs):
 		kwargs = _get_kwargs()
 
 	from ChatLogParser import TwitchChatParser
-	from TopicModeling import LDAModeling
-	from SentimentAnalysis import LinearSVCClassifier
+	from DictionaryTagger import DictionaryTagger
+	from SentimentAnalysis import SentimentAnalyzer
+	from BitermTopicModeling import BBTM
 
-	if kwargs['num_topics']:
-		num_topics = kwargs['num_topics']
-	else:
-		num_topics = 10
 
-	DIR = os.path.abspath('')
-	LOG_DIR = os.path.abspath('logfile/'+kwargs['streamer'])
+	# ==== Settings ====
+	with open('global.yaml', 'r') as f:
+		_global = yaml.load(f)
 
-	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=kwargs['streamer'], dir_path=LOG_DIR)
-	text_parser.update_emotes_by_csv('sub_emotes.csv')
-	text_parser.update_emotes_by_csv('global_emotes.csv')
-	text_parser.set_content()
-	        
-	# ==== Clean up the data (in set_sentiment) and Sentiment Analysis ====
-	sentier = LinearSVCClassifier()
-	sentier.load_data(dir=DIR+'/review_polarity/reviews')
-	sentier.set_sentiment(text_parser)
+	streamer = kwargs['streamer']
+	streamerDir = os.path.join(_global['STREAMER_DIR'], streamer)
 
-	# ==== Topic Modeling ====
+	with open(os.path.join(streamerDir, 'local.yaml'), 'r') as f:
+		_local = yaml.load(f)
+
 	
-	topic_parser = LDAModeling(training_data=sentier.training_data, num_topics=num_topics)
-	topic_parser.build_lda_model()
+	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_files=_global['emotefilesDir'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
+	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
+	
+	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Prepare for sentiment analysis
+	text_parser.sentiment_analysis()
+	# text_parser.save_cleaned_log(_local['streamDir']+'/cleaned_logs') # We save the cleaned log file that contains all lowercase-letters, remove stop_words, remove repeated letters in word, remove punctuations
+	
+
+	# ==== Bursty Biterm Topic Modeling ====
+	biterm = BBTM()
+	biterm.indeXing(_local['streamDir']+'/cleaned_logs_dir', _local['streamDir']+'/output')
 
 	# [RPOBLEM 1 - Topic Modeling ]
 	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 
@@ -51,6 +54,8 @@ def main(**kwargs):
 
 	# ==== Assign topic for each utterance ====
 	topics_dict = topic_parser.set_topics(text_parser, sentier.emo_only_index)
+    
+	
 
 	# ==== Cal score of relation for each utterance ====
 	text_parser.set_relation(topics_dict, 0.05)
