@@ -15,7 +15,7 @@ class TwitchChatParser:
 	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage"]
 	robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
 
-	def __init__(self, streamer, emote_dir, dir_path=None, filename=None, keyword=None, spell_check=False, save_cleaned_logfiles_to=None):
+	def __init__(self, streamer):
 		"""	
 			Each element in "token_lists" is a tuple of four elements: 
 				- token 
@@ -30,21 +30,12 @@ class TwitchChatParser:
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
 		self.count_tokens = Counter()
 		self.preprocess = Preprocessor()
+		self.can_set_topics = []
 
-		# self._update_emotes(emote_dir)
 		self.fetch_emotes()
-
-		if dir_path:
-			self._read_log_from_dir(dir_path)
-		elif filename:
-			self._read_from_file(filename)
-		else: # raise an error
-			pass
-
-		self._save_cleaned_log(save_cleaned_logfiles_to)
 		# self._co_occurrence_matrix()
 
-	def _read_log_from_dir(self, dir_path):
+	def read_log_from_dir(self, dir_path):
 		self.logfile_info['token_lists'] = [] 	# [[(w1, w1's lemma, [tags], property), ()], sentiment, content, topics, relation]
 		self.logfile_info['utterances'] = []
 		self.logfile_info['users_list'] = []
@@ -58,17 +49,8 @@ class TwitchChatParser:
 					print("[*] Loading the log file: '%s'..." % fn)
 					for line in f:
 						data.append(line)
-		
-		self._parsing(data)
 
-	def _read_from_file(self, file_name):
-		try:
-			with open(file_name, "r") as f:
-				for line in f:
-					self.data.append(line)
-					print("[*] Loading the log file '%s'..." % file_name)
-		except Exception as e:
-			print(str(e))
+		return data
 
 	def _get_streamer_emote(self):
 		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
@@ -92,7 +74,8 @@ class TwitchChatParser:
 			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
-	def _parsing(self, data):
+	def parsing(self, data):
+		print("[*] Parsing the data ...")
 		set_ref_time = 0
 		for line in data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
@@ -351,19 +334,30 @@ class TwitchChatParser:
 				self.logfile_info['token_lists'][i].append(0)
 		print("[*] sentiment analysis setting finished !")
 
-	def _save_cleaned_log(self, output_dir):
-		save_f = os.path.join(output_dir, self.streamer)
+	def save_parsed_log(self, output_dir):
+		# Save the cleaned log (filter out 'URL', repeapted letters, punctuations)
+		# Save file to ../{streamer}/cleaned_logs_dir/{streamer}.txt
+		save_f = os.path.join(output_dir, self.streamer+'.txt')
 		with open(save_f, 'w') as f:
-			for sentence in self.logfile_info['token_lists']:
-				if len(sentence[0]) > 0:
-					line = ' '.join([tokens[0] for tokens in sentence[0] if tokens[-1] != 'URL'])
-					f.write(line+'\n')
+			for i in range(len(self.logfile_info['token_lists'])):
+				if len(self.logfile_info['token_lists'][i][0]) > 0:
+					line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] != 'URL'])
+					if len(line) > 0:
+						self.can_set_topics.append(i)
+						f.write(line+'\n')
+
+		print("[*] Saving the parsed logs to %s\n" % save_f)
 	
-	# def set_topics(self, topics):
-	# 	# topic: 1 ~ num_topics
-	# 	k = 0
-	# 	for i in range(len(self.logfile_info['token_lists'])):
-	# 		if len(self.logfile_info['token_lists'][i][0]) > 0:
+	def set_topics(self, topics):
+		# topic: 1 ~ num_topics
+		k = 0
+		for i in range(len(self.logfile_info['token_lists'])):
+			if i == self.can_set_topics[k]:
+				self.logfile_info['token_lists'][i].append(topics[k])
+				k += 1
+			else:
+				self.logfile_info['token_lists'][i].append(0)
+
 
 
 

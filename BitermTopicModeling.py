@@ -75,7 +75,12 @@ class BTM:
 			maximum_p = sorted(topic_distributions)[-1]
 			for i in range(len(topic_distributions)):
 				if maximum_p == topic_distributions[i]:
-					t_distributions.append(i)					
+					t_distributions.append(i+1)
+
+		if save:
+			saved = os.path.join(output_dir, 'topics.txt')
+			print("[*] Saving topics distributions to %s" % saved)
+			self._save_topics(saved, 0.02)
 
 		if show:
 			print("================ Topic Display ================")
@@ -83,16 +88,12 @@ class BTM:
 			# for pz, s in sorted(topics, reverse=True):
 			# 	print('%f\t%s' % (pz, s))
 			for key in self.topics_dict:
-				print('%d\t%f\t%s' % (key, self.topics_dict[key][0], self.topics_dict[key][1]))
-
-		if save:
-			self._save_topics(output_dir, 0.02)
+				print('%d\t%f\t%s' % (key+1, self.topics_dict[key][0], self.topics_dict[key][1]))
 
 		return t_distributions
 		
-	def _save_topics(self, out_dir, threshold=0.02):
-		save_f = os.path.join(out_dir, 'topics.txt')
-		with open(save_f, 'w') as wf:
+	def _save_topics(self, out_file, threshold=0.02):
+		with open(out_file, 'w') as wf:
 			for key, val in self.topics_dict.items():
 			    topics = ' '.join([t_p.split(':')[0] for t_p in val[1].split() if float(t_p.split(':')[1]) >= threshold])
 			    wf.write(topics+'\n')
