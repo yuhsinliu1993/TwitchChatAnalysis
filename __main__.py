@@ -17,7 +17,7 @@ def main(**kwargs):
 	from ChatLogParser import TwitchChatParser
 	from DictionaryTagger import DictionaryTagger
 	from SentimentAnalysis import SentimentAnalyzer
-	from BitermTopicModeling import BBTM
+	from BitermTopicModeling import BTM
 
 
 	# ==== Settings ====
@@ -32,7 +32,7 @@ def main(**kwargs):
 
 	
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
-	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_files=_global['emotefilesDir'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
+	text_parser = TwitchChatParser(streamer=streamer, dir_path=os.path.join(streamerDir, 'log'), emote_dir=_global['emotefilesDir'], save_cleaned_logfiles_to=os.path.join(streamerDir, 'cleaned_logs_dir'))
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
 	
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Prepare for sentiment analysis
@@ -41,28 +41,19 @@ def main(**kwargs):
 	
 
 	# ==== Bursty Biterm Topic Modeling ====
-	biterm = BBTM()
-	biterm.indeXing(_local['streamDir']+'/cleaned_logs_dir', _local['streamDir']+'/output')
+	biterm = BTM(num_topics=10)
+	biterm.FileIndeXing(os.path.join(streamerDir, 'cleaned_logs_dir', 'reckful1.log'), os.path.join(streamerDir, 'output')) # doc_wids.txt, vocabulary.txt
+	topics = biterm.get_topics_distributions(os.path.join(streamerDir, 'output'), show=True, save=True)
+	text_parser.set_topics(topics)
 
-	# [RPOBLEM 1 - Topic Modeling ]
-	# Due to the majority of the utterances are short and sparse texts. I found that LDA modeling 
-	# does not work well on short and sparse texts.
-
-	# [PROBLEM 2 - Relation between topic and utterance ]
-	# How does an utternace related to topic? Should I aggregate the score of every word in the utterance, and  
-	# then judge it via the threshold I set? Should I trust the topic model? 
-
-	# ==== Assign topic for each utterance ====
-	topics_dict = topic_parser.set_topics(text_parser, sentier.emo_only_index)
-    
 	
 
 	# ==== Cal score of relation for each utterance ====
-	text_parser.set_relation(topics_dict, 0.05)
+	# text_parser.set_relation(topics_dict, 0.05)
 
 	# ==== Write to file ====
-	topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)
-	text_parser.save_log_to_csv(kwargs['streamer'] + '_final.csv')
+	# topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)
+	# text_parser.save_log_to_csv(kwargs['streamer'] + '_final.csv')
 
 
 	# ==== Get Parameters ====

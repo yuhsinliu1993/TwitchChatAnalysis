@@ -8,10 +8,11 @@ class SentimentAnalyzer():
 	def __init__(self, emotes):
 		self.emotes = copy.copy(emotes)
 
-	def check_emote(self, emote):
+	def check_emote(self, token):
 		for i in range(len(self.emotes)):
-			if emote == self.emotes[i][0]:
-				return int(self.emotes[i][1])
+			if token == self.emotes[i][0]:
+				return float(self.emotes[i][1])
+		return 0.0
 
 	def value_of(self, tag):
 		if tag == 'positive': 
@@ -20,7 +21,7 @@ class SentimentAnalyzer():
 			return -1
 		return 0
 
-	def sentence_score(self, sentence_tokens, previous_token, acum_score):    
+	def sentence_score(self, sentence_tokens, previous_token, acum_score):
 		if not sentence_tokens:
 			return acum_score
 		else:

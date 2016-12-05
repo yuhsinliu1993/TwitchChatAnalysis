@@ -17,17 +17,14 @@ class BaseModel:
 		self.totalvocab_tokenized = []
 		self._documents = []	 	# cleaned tokens
 		
-	def tokenization(self):
-		for text in self.data:
-			# allwords_stemmed = self._tokenize_and_stem(text) #for each item in 'synopses', tokenize/stem
-			# self.totalvocab_stemmed.append(allwords_stemmed) #extend the 'totalvocab_stemmed' list
-			
-			allwords_tokenized = self._tokenize_only(text)
-			self.totalvocab_tokenized.append(allwords_tokenized)
+	# def tokenization(self):
+	# 	for text in self.data:
+	# 		allwords_tokenized = self._tokenize_only(text)
+	# 		self.totalvocab_tokenized.append(allwords_tokenized)
 		
-		self._clean_up_tokens()
+	# 	self._clean_up_tokens()
 		
-		return self._documents
+	# 	return self._documents
 
 	def _tokenize_and_stem(self, text):
 		# [ADD] remove unigrams
@@ -80,7 +77,7 @@ class LDAModeling(BaseModel):
 		self._passes = passes
 		self._alpha = alpha
 
-		self.tokenization()
+		# self.tokenization()
 
 	def build_lda_model(self):		
 		self._dictionary = corpora.Dictionary(self._documents)

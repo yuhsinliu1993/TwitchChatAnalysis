@@ -31,14 +31,17 @@ regex_str = [
 
 class Preprocessor:
 
-	stops = get_stop_words('en') + ['via', 'im'] 
+	stops = get_stop_words('en') + ['via', 'im', 'u']
 	puncs = list(string.punctuation)
 	tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 	emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
 
 
 	def __init__(self):
-		pass
+		try:
+			self.stops.remove('not')
+		except:
+			pass
 
 	def sentence_to_tokens(self, sentence):
 		return self.tokens_re.findall(sentence)
@@ -50,8 +53,8 @@ class Preprocessor:
 					- Translate word to lowercase
 					- Remove stop words 
 					- Replicated characters were removed to restore words to their standard spelling, e.g., loooool -> lol
-					- [Not Done] Abbreviations were spelled out in full, e.g., h8 → hate.
-					
+					- [Not Done] Abbreviations were spelled out in full, e.g., h8 -> hate.
+
 				2. placeholder
 					- URL, hashtag, and mention (such as “@username”) were replaced with the placeholders "URL", "HASHTAG" and "USERNAME"
 					- Emoticons were replaced by one of nine labels: e_laugh, e_happy, e_surprise, e_positive_state, e_neutral_state, e_inexpressive, e_negative_state, e_sad and e_sick.
@@ -80,7 +83,7 @@ class Preprocessor:
 			tokens_p = [(re.sub(r'(.)\1+', r'\1', token), p) if p not in ('URL', 'HASHTAG', 'EMOTICON') else (token, p) for (token, p) in tokens_p]
 
 		if remove_punc:
-			tokens_p = [(token, p) for (token, p) in tokens_p if token not in self.puncs and p == 'NORMAL']
+			tokens_p = [(token, p) for (token, p) in tokens_p if token not in self.puncs]
 
 		return tokens_p
 
