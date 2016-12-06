@@ -8,7 +8,7 @@
       
 ## Usage ##
 ```python
-usage: . [-h] [-c] [-n num_topics] streamer
+python: __main__.py [-h] [-c] [-n num_topics] streamer
 ```
 ## Result: analysis.csv ##
 In streamer/output directory
