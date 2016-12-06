@@ -2,9 +2,10 @@ import argparse, os, yaml
 
 def _get_kwargs():
 	parser = argparse.ArgumentParser()
-	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")
+	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")	
+	parser.add_argument("-c", "--clean", action='store_true', help="clean the unuseful data")
 	# parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
-	# parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
 	# parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
 	return vars(parser.parse_args())
 
@@ -18,7 +19,7 @@ def main(**kwargs):
 	from DictionaryTagger import DictionaryTagger
 	from SentimentAnalysis import SentimentAnalyzer
 	from BitermTopicModeling import BTM
-
+	from subprocess import call
 
 	# ==== Settings ====
 	with open('global.yaml', 'r') as f:
@@ -31,6 +32,10 @@ def main(**kwargs):
 		_local = yaml.load(f)
 
 	
+	# ==== create some dir ====
+	call(['mkdir', '-p', streamerDir+'/output/model'])
+	call(['mkdir', '-p', streamerDir+'/cleaned_logs_dir'])
+
 	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
 	text_parser = TwitchChatParser(streamer=streamer)
 	data = text_parser.read_log_from_dir(os.path.join(streamerDir, 'log'))
@@ -41,25 +46,28 @@ def main(**kwargs):
 	text_parser.sentiment_analysis()
 
 	# ==== Bursty Biterm Topic Modeling ====
-	biterm = BTM(num_topics=10)
+	biterm = BTM(num_topics=kwargs['num_topics'])
 	biterm.FileIndeXing(os.path.join(streamerDir, 'cleaned_logs_dir', streamer+'.txt'), os.path.join(streamerDir, 'output')) # doc_wids.txt, vocabulary.txt
 
-	# ==== sh run.sh ====
+	# ==== biterm topic modeling ====
+	call(['bash', 'run.sh'])
 
 	topics = biterm.get_topics_distributions(os.path.join(streamerDir, 'output'), show=True, save=True)
 	text_parser.set_topics(topics) 
 	text_parser.set_relation(threshold=0.01)
 	text_parser.save_log_to_csv(out_dir=os.path.join(streamerDir, 'output'))
-
-	# ==== Write to file ====
-	# topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)
 	
 
-
 	# ==== Get Parameters ====
-	print('COMMENT_NUM: %d' % len(text_parser.utterances))
-	print('TOPIC_NUM: %d' % num_topics)
+	print('\n============ Paramerters ============')
+	print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
+	print('TOPIC_NUM: %d' % kwargs['num_topics'])
 	# VIDEO_LENGTH = 
+
+	if kwargs['clean']:
+		call(['rm', '-rf', streamerDir+'/output/topics.txt'])
+		call(['rm', '-rf', streamerDir+'/output/doc_wids.txt'])
+		call(['rm', '-rf', streamerDir+'/cleaned_logs_dir'])
 
 
 if __name__ == '__main__':
