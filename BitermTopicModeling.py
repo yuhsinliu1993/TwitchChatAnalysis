@@ -93,6 +93,7 @@ class BTM:
 		return t_distributions
 		
 	def _save_topics(self, out_file, threshold=0.02):
+		print('[*] Save topics to %s' % out_file)
 		with open(out_file, 'w') as wf:
 			for key, val in self.topics_dict.items():
 			    topics = ' '.join([t_p.split(':')[0] for t_p in val[1].split() if float(t_p.split(':')[1]) >= threshold])

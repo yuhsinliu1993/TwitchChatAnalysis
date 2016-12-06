@@ -28,12 +28,9 @@ class TwitchChatParser:
 		self.streamer = streamer
 		self.streamer_emotes = self._get_streamer_emote()
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
-		self.count_tokens = Counter()
 		self.preprocess = Preprocessor()
 		self.can_set_topics = []
-
 		self.fetch_emotes()
-		# self._co_occurrence_matrix()
 
 	def read_log_from_dir(self, dir_path):
 		self.logfile_info['token_lists'] = [] 	# [[(w1, w1's lemma, [tags], property), ()], sentiment, content, topics, relation]
@@ -89,22 +86,21 @@ class TwitchChatParser:
 				self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
 				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes])
-				# print(tokens_p)
 				self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 				self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
 			
-	# def _co_occurrence_matrix(self):
-	# 	# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
-	# 	# Also, we don’t count the same term pair twice, e.g. co_matrix[A][B] == co_matrix[B][A]
-	# 	# EX: co_matrix['bronze'] =  defaultdict(int, {'chat': 2, 'four': 72, 'kickman': 2, 'lol': 2, 'lp': 2, 'lul': 74, 'vannie': 30, 'w': 2})
-	# 	# 	  the utteranes that contains 'bronze' has been seen the 'chat' term twice and 'four' term 72 times...
-	# 	for u in self.token_lists:
-	# 	    if len(u[0]) > 0:
-	# 	        for i in range(len(u[0])-1):            
-	# 	            for j in range(i+1, len(u[0])):
-	# 	                w1, w2 = sorted([u[0][i][0], u[0][j][0]]) 
-	# 	                if w1 != w2:
-	# 	                    self.co_matrix[w1][w2] += 1
+	def co_occurrence_matrix(self):
+		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
+		# Also, we don’t count the same term pair twice, e.g. co_matrix[A][B] == co_matrix[B][A]
+		# EX: co_matrix['bronze'] =  defaultdict(int, {'chat': 2, 'four': 72, 'kickman': 2, 'lol': 2, 'lp': 2, 'lul': 74, 'vannie': 30, 'w': 2})
+		# 	  the utteranes that contains 'bronze' has been seen the 'chat' term twice and 'four' term 72 times...
+		for sentence in self.logfile_info['token_lists']:
+		    if len(sentence[0]) > 0:
+		        for i in range(len(sentence[0])-1):
+		            for j in range(i+1, len(sentence[0])):
+		                w1, w2 = sorted([sentence[0][i][0], sentence[0][j][0]]) 
+		                if w1 != w2:
+		                    self.co_matrix[w1][w2] += 1
 		
 	def most_common_cooccurrent_terms(self, n=5):
 		com_max = []
@@ -120,17 +116,10 @@ class TwitchChatParser:
 		else:
 			print(terms_max[:])
 
-	def most_common_words(self, n=5):
-		print(self.count_tokens.most_common(n))
-		return self.count_tokens.most_common(n)
-
 	def set_content(self, keywords, spam_threshold=5):
 		for i in range(len(self.logfile_info['token_lists'])):
 			content = self._set_content(self.logfile_info['token_lists'][i][0], i, keywords, spam_threshold)
 			self.logfile_info['token_lists'][i].append(content)
-		# for i in range(len(self.token_lists)):
-		# 	content = self._set_content(self.token_lists[i][0], i, keywords, spam_threshold)
-		# 	self.token_lists[i].append(content)
 		print("[*] content setting finished !")
 
 	# 1: normal conversation, 2: Question, 3: Spam, 4: keyword-based text, 5: emote only, 6: Command and Bot
@@ -176,52 +165,20 @@ class TwitchChatParser:
 
 		return '1'
 
-	# def clean_up(self, str): # called in 'SentimentAnalysis'
-	# 	# NOTE: Only deal with english utterance right now
-	# 	if preprocess.check_lang(str) == 'en':
-	# 		str = preprocess.remove_emoji(str)
-	# 		str = preprocess.remove_stops(str)
-	# 		str = preprocess.remove_features(str)
-	# 		# Tagging.  TODO: make a twitch emotes tagging and remove them?
-	# 		# str = preprocess.tag_and_remove(str)
-	# 		# lemmatization
-	# 		# str = preprocess.lemmatize(str)
-	# 		return str
-	# 	else:
-	# 		return ''
+	def save_log_to_csv(self, out_dir):
+		with open(os.path.join(out_dir, 'analysis.csv'), 'w') as csvfile:
+			field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
+			writer = csv.DictWriter(csvfile, fieldnames=field_names)
+			writer.writeheader()
 
-	# Do emo_related_check after clean_up the text 
-	# def emo_related_check(self, text):
-	# 	# Determine if a sentence has twitch emote pics 
-	# 	# 0: no emote  1: emo related  2: only emo in the text
-	# 	emo_related = 0
-	# 	has_word = 0
-	# 	for word in text.split():
-	# 		if word.lower() in [emo[0] for emo in self.emotes]:
-	# 			emo_related = 1
-	# 		else:
-	# 			has_word = 1
-	# 	if has_word:
-	# 		if emo_related:
-	# 			return 1
-	# 		else:
-	# 			return 0
-	# 	return 2
-
-	# def save_log_to_csv(self, filename):
-	# 	with open(filename, 'w') as csvfile:
-	# 		field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
-	# 		writer = csv.DictWriter(csvfile, fieldnames=field_names)
-	# 		writer.writeheader()
-
-	# 		for i in range(len(self.user_lists)):
-	# 			writer.writerow({'time': str(self.time[i]), 
-	# 							 'topic': str(self.token_lists[i][3]),
-	# 							 'related': self.token_lists[i][4],
-	# 							 'emotion': str(self.token_lists[i][2]),
-	# 							 'content': self.token_lists[i][1],
-	# 							 'comment': self.utterances[i]
-	# 							 })
+			for i in range(len(self.logfile_info['token_lists'])):
+				writer.writerow({'time': str(self.logfile_info['time'][i]),
+								 'topic': str(self.logfile_info['token_lists'][i][3]),
+								 'related': self.logfile_info['token_lists'][i][4],
+								 'emotion': str(self.logfile_info['token_lists'][i][2]),
+								 'content': self.logfile_info['token_lists'][i][1],
+								 'comment': self.logfile_info['utterances'][i]
+								 })
 
 
 	def _update_emotes(self, emote_dir): 
@@ -281,47 +238,9 @@ class TwitchChatParser:
 		for robot in self.robot_emotes:
 			emo = key.lower()
 			self.emotes.append((emo, self._check_sentiment(emo)))
-
-
-	def get_emote_score(self, emote):
-		for i in range(len(self.emotes)):
-			if emote == self.emotes[i][0]:
-				return int(self.emotes[i][1])
-
-	# def show_all_utterance_with_topic(self, topic_no):
-	# 	for i in range(len(self.token_lists)):
-	# 		if self.token_lists[i][2] == topic_no:
-	# 			print(self.token_lists[i][0])
-
-	def common_text_check(self, text):
-		score = 0
-		for t in text.split():
-			for pos in self.common_pos:
-				if t.lower().find(pos) >= 0:
-					score += 1
-			for neg in self.common_neg:
-				if t.lower().find(neg) >= 0:
-					score -= 1
-		return score
-
-	# def set_relation(self, topics_dict, threshold):
-	# 	total_score = 0
-	# 	for i in range(len(self.token_lists)):
-	# 		score = 0
-	# 		for word in self.token_lists[i][0].split():
-	# 			for t_d in topics_dict[self.token_lists[i][-1]]:
-	# 				if word.lower().find(t_d[0]) >= 0:
-	# 					score += t_d[1]	
-	# 		# print("[relation] #%d: %f" % (i, score))
-	# 		total_score += score
-	# 		if score >= threshold:
-	# 			self.token_lists[i].append('1')
-	# 		else:
-	# 			self.token_lists[i].append('2')
 		
 	def dictionary_tagger(self, sentiment_files):
 		tagger = DictionaryTagger(sentiment_files)
-		
 		self.logfile_info['token_lists'] = tagger.tag(self.logfile_info['token_lists'])
 
 	def sentiment_analysis(self):
@@ -346,7 +265,7 @@ class TwitchChatParser:
 						self.can_set_topics.append(i)
 						f.write(line+'\n')
 
-		print("[*] Saving the parsed logs to %s\n" % save_f)
+		print("[*] Save the parsed logs to %s" % save_f)
 	
 	def set_topics(self, topics):
 		# topic: 1 ~ num_topics
@@ -358,6 +277,35 @@ class TwitchChatParser:
 			else:
 				self.logfile_info['token_lists'][i].append(0)
 
+		print("[*] topics setting finished !")
+
+	def set_relation(self, threshold=0.01):
+		cp = defaultdict(float)
+		total = sum([count for count in self.logfile_info['count_tokens'].values()])
+		
+		for w, c in self.logfile_info['count_tokens'].items():
+			cp[w] = c / total
+
+		cp = sorted(cp.items(), key=operator.itemgetter(1), reverse=True)
+
+		for i in range(len(self.logfile_info['token_lists'])):
+			p = self._set_relation(self.logfile_info['token_lists'][i][0], cp)
+			if p >= threshold:
+				self.logfile_info['token_lists'][i].append('1')
+			else:
+				self.logfile_info['token_lists'][i].append('2')
+
+		print("[*] relation setting finished !")
+
+	def _set_relation(self, sentence, cp):
+		p = 0.0
+		if len(sentence) > 0:
+			for word in sentence:
+				for i in range(len(cp)):
+					if word[0] == cp[i][0]:
+						p += cp[i][1]
+		
+		return p
 
 
 

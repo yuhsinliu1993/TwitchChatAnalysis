@@ -36,7 +36,7 @@ def main(**kwargs):
 	data = text_parser.read_log_from_dir(os.path.join(streamerDir, 'log'))
 	text_parser.parsing(data)
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
-	text_parser.save_parsed_log(os.path.join(streamerDir, 'cleaned_logs_dir'))
+	text_parser.save_parsed_log(os.path.join(streamerDir, 'cleaned_logs_dir')) # [??] Should I get rid of "EMOTICON" word in parsed log
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
 
@@ -47,17 +47,13 @@ def main(**kwargs):
 	# ==== sh run.sh ====
 
 	topics = biterm.get_topics_distributions(os.path.join(streamerDir, 'output'), show=True, save=True)
-	n = text_parser.set_topics(topics)
-	
-
-	
-
-	# ==== Cal score of relation for each utterance ====
-	# text_parser.set_relation(topics_dict, 0.05)
+	text_parser.set_topics(topics) 
+	text_parser.set_relation(threshold=0.01)
+	text_parser.save_log_to_csv(out_dir=os.path.join(streamerDir, 'output'))
 
 	# ==== Write to file ====
 	# topic_parser.save_topics(kwargs['streamer'] + '_topics.txt', 0.02, topics_dict)
-	# text_parser.save_log_to_csv(kwargs['streamer'] + '_final.csv')
+	
 
 
 	# ==== Get Parameters ====
