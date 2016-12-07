@@ -31,31 +31,37 @@ def main(**kwargs):
 	with open(os.path.join(streamerDir, 'local.yaml'), 'r') as f:
 		_local = yaml.load(f)
 
+	log_dir = os.path.join(streamerDir, 'log')
+	output_dir = os.path.join(streamerDir, 'output')
+	saved_log_path = os.path.join(output_dir, 'cleaned_%s.txt' % streamer)
 	
-	# ==== create some dir ====
 	call(['mkdir', '-p', streamerDir+'/output/model'])
-	call(['mkdir', '-p', streamerDir+'/cleaned_logs_dir'])
 
-	# ==== Load chat log file into 'TwitchChatLogParser' class ==== 
+	
 	text_parser = TwitchChatParser(streamer=streamer)
-	data = text_parser.read_log_from_dir(os.path.join(streamerDir, 'log'))
+	data = text_parser.read_log_from_dir(log_dir)
 	text_parser.parsing(data)
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
-	text_parser.save_parsed_log(os.path.join(streamerDir, 'cleaned_logs_dir')) # [??] Should I get rid of "EMOTICON" word in parsed log
+	
+	# [??] Should I get rid of "EMOTICON" word in parsed log
+	# [??] Remove "Command and Bot's answer" 
+	text_parser.save_parsed_log(saved_log_path) 
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
 
+	
 	# ==== Bursty Biterm Topic Modeling ====
 	biterm = BTM(num_topics=kwargs['num_topics'])
-	biterm.FileIndeXing(os.path.join(streamerDir, 'cleaned_logs_dir', streamer+'.txt'), os.path.join(streamerDir, 'output')) # doc_wids.txt, vocabulary.txt
+	biterm.FileIndeXing(saved_log_path, output_dir) # doc_wids.txt, vocabulary.txt
 
+	
 	# ==== biterm topic modeling ====
 	call(['bash', 'run.sh'])
 
-	topics = biterm.get_topics_distributions(os.path.join(streamerDir, 'output'), show=True, save=True)
+	topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
 	text_parser.set_topics(topics) 
 	text_parser.set_relation(threshold=0.01)
-	text_parser.save_log_to_csv(out_dir=os.path.join(streamerDir, 'output'))
+	text_parser.save_analysis(output_dir)
 	
 
 	# ==== Get Parameters ====
@@ -65,9 +71,7 @@ def main(**kwargs):
 	# VIDEO_LENGTH = 
 
 	if kwargs['clean']:
-		call(['rm', '-rf', streamerDir+'/output/topics.txt'])
 		call(['rm', '-rf', streamerDir+'/output/doc_wids.txt'])
-		call(['rm', '-rf', streamerDir+'/cleaned_logs_dir'])
 
 
 if __name__ == '__main__':

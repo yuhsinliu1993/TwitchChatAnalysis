@@ -46,7 +46,6 @@ class TwitchChatParser:
 					print("[*] Loading the log file: '%s'..." % fn)
 					for line in f:
 						data.append(line)
-
 		return data
 
 	def _get_streamer_emote(self):
@@ -81,13 +80,14 @@ class TwitchChatParser:
 				if not set_ref_time:
 					self.logfile_info['ref_time'] = (int(match.group(1))+int(match.group(2)))*60 + int(match.group(3))
 					set_ref_time = 1
-				
+					
 				self.logfile_info['users_list'].append(match.group(4))
 				self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
 				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes])
 				self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 				self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
+
 			
 	def co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
@@ -165,22 +165,6 @@ class TwitchChatParser:
 
 		return '1'
 
-	def save_log_to_csv(self, out_dir):
-		with open(os.path.join(out_dir, 'analysis.csv'), 'w') as csvfile:
-			field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
-			writer = csv.DictWriter(csvfile, fieldnames=field_names)
-			writer.writeheader()
-
-			for i in range(len(self.logfile_info['token_lists'])):
-				writer.writerow({'time': str(self.logfile_info['time'][i]),
-								 'topic': str(self.logfile_info['token_lists'][i][3]),
-								 'related': self.logfile_info['token_lists'][i][4],
-								 'emotion': str(self.logfile_info['token_lists'][i][2]),
-								 'content': self.logfile_info['token_lists'][i][1],
-								 'comment': self.logfile_info['utterances'][i]
-								 })
-
-
 	def _update_emotes(self, emote_dir): 
 		# store "lower-case" emotion and its emo-score
 		i = 0
@@ -253,17 +237,21 @@ class TwitchChatParser:
 				self.logfile_info['token_lists'][i].append(0)
 		print("[*] sentiment analysis setting finished !")
 
-	def save_parsed_log(self, output_dir):
+	def save_parsed_log(self, save_f):
 		# Save the cleaned log (filter out 'URL', repeapted letters, punctuations)
-		# Save file to ../{streamer}/cleaned_logs_dir/{streamer}.txt
-		save_f = os.path.join(output_dir, self.streamer+'.txt')
+		# Save file to ../{streamer}/cleaned_logs_dir/cleaned_{streamer}.txt
 		with open(save_f, 'w') as f:
 			for i in range(len(self.logfile_info['token_lists'])):
 				if len(self.logfile_info['token_lists'][i][0]) > 0:
 					line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] != 'URL'])
 					if len(line) > 0:
-						self.can_set_topics.append(i)
+						self.logfile_info['token_lists'][i].append('Kept')
 						f.write(line+'\n')
+					else:
+						self.logfile_info['token_lists'][i].append('Notkept')
+				else:
+					self.logfile_info['token_lists'][i].append('Notkept')
+
 
 		print("[*] Save the parsed logs to %s" % save_f)
 	
@@ -271,11 +259,11 @@ class TwitchChatParser:
 		# topic: 1 ~ num_topics
 		k = 0
 		for i in range(len(self.logfile_info['token_lists'])):
-			if i == self.can_set_topics[k]:
-				self.logfile_info['token_lists'][i].append(topics[k])
+			if 'Kept' in self.logfile_info['token_lists'][i]:
+				self.logfile_info['token_lists'][i].append(str(topics[k]))
 				k += 1
 			else:
-				self.logfile_info['token_lists'][i].append(0)
+				self.logfile_info['token_lists'][i].append('0')
 
 		print("[*] topics setting finished !")
 
@@ -307,7 +295,20 @@ class TwitchChatParser:
 		
 		return p
 
+	def save_analysis(self, out_dir):
+		with open(os.path.join(out_dir, 'analysis.csv'), 'w') as csvfile:
+			field_names = ['time', 'topic', 'related', 'emotion', 'content', 'comment']
+			writer = csv.DictWriter(csvfile, fieldnames=field_names)
+			writer.writeheader()
 
+			for i in range(len(self.logfile_info['token_lists'])):
+				writer.writerow({'time': str(self.logfile_info['time'][i]),
+								 'topic': self.logfile_info['token_lists'][i][4],
+								 'related': self.logfile_info['token_lists'][i][5],
+								 'emotion': str(self.logfile_info['token_lists'][i][3]),
+								 'content': self.logfile_info['token_lists'][i][1],
+								 'comment': self.logfile_info['utterances'][i]
+								 })
 
 
 
