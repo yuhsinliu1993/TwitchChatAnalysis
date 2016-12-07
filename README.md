@@ -1,10 +1,11 @@
 #Twitch Chatting Log Analysis
 
-- Before start
-   - Required python package
-      - nltk
-      - gensim
-      - stop_words
+- Required python package
+   > nltk
+   
+   > gensim
+   
+   > stop_words
       
 ## Usage ##
 ```python
