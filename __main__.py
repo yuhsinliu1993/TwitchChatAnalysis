@@ -4,11 +4,8 @@ def _get_kwargs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")	
 	parser.add_argument("-c", "--clean", action='store_true', help="clean the unuseful data")
-	# parser.add_argument("-g", "--game", type=str, help="Specify a game the streamer played")	
 	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
-	# parser.add_argument("-k", "--keywords", nargs='*', help="the keyword list that uses in setting contents")
 	return vars(parser.parse_args())
-
 
 def main(**kwargs):
 	
@@ -37,14 +34,16 @@ def main(**kwargs):
 	
 	call(['mkdir', '-p', streamerDir+'/output/model'])
 
-	
+	# ==== Starting Parse the log =====
 	text_parser = TwitchChatParser(streamer=streamer)
-	data = text_parser.read_log_from_dir(log_dir)
+	# data = text_parser.load_log_from_dir(log_dir)
+	data = text_parser.load_logfile(os.path.join(streamerDir, 'log', 'riotgames1.log'))
 	text_parser.parsing(data)
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
 	
 	# [??] Should I get rid of "EMOTICON" word in parsed log
-	# [??] Remove "Command and Bot's answer" 
+	# [??] Remove "Command and Bot's answer"
+	# [??] Filter out the token which appears only one time
 	text_parser.save_parsed_log(saved_log_path) 
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
@@ -56,7 +55,7 @@ def main(**kwargs):
 
 	
 	# ==== biterm topic modeling ====
-	call(['bash', 'run.sh'])
+	call(['bash', 'run.sh', str(kwargs['num_topics']), streamer])
 
 	topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
 	text_parser.set_topics(topics) 

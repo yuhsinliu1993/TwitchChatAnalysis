@@ -24,6 +24,11 @@ class TwitchChatParser:
 				- property
 		"""
 		self.logfile_info = {}  # { logfiie: { "token_list": [], "utterances": [], "time": [], users_list = [], ref_time: int,  } }
+		self.logfile_info['token_lists'] = [] 	# [[(w1, w1's lemma, [tags], property), ()], sentiment, content, topics, relation]
+		self.logfile_info['utterances'] = []
+		self.logfile_info['users_list'] = []
+		self.logfile_info['time'] = []
+		self.logfile_info['count_tokens'] = Counter()
 		self.emotes = []
 		self.streamer = streamer
 		self.streamer_emotes = self._get_streamer_emote()
@@ -32,13 +37,7 @@ class TwitchChatParser:
 		self.can_set_topics = []
 		self.fetch_emotes()
 
-	def read_log_from_dir(self, dir_path):
-		self.logfile_info['token_lists'] = [] 	# [[(w1, w1's lemma, [tags], property), ()], sentiment, content, topics, relation]
-		self.logfile_info['utterances'] = []
-		self.logfile_info['users_list'] = []
-		self.logfile_info['time'] = []
-		self.logfile_info['count_tokens'] = Counter()
-		
+	def load_log_from_dir(self, dir_path):
 		data = []
 		for fn in os.listdir(dir_path):
 			if os.path.splitext(fn)[1] == '.log':
@@ -48,26 +47,38 @@ class TwitchChatParser:
 						data.append(line)
 		return data
 
+	def load_logfile(self, file_path):		
+		print("[*] Loading the log file: '%s'..." % file_path)
+		
+		data = []
+		with open(file_path, "r") as f:
+			for line in f:
+				data.append(line)
+		return data
+
 	def _get_streamer_emote(self):
-		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
-		data = response.read().decode("utf-8")
-		if data == '':
-			response = urlopen('https://twitchemotes.com/api_cache/v2/images.json')
+		try:
+			response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
 			data = response.read().decode("utf-8")
-			data = json.loads(data)
-			
 			if data == '':
-				print("[!!] Cannot retrieve '%s' emotes\n" % self.streamer)
-				return []
+				response = urlopen('https://twitchemotes.com/api_cache/v2/images.json')
+				data = response.read().decode("utf-8")
+				data = json.loads(data)
+				
+				if data == '':
+					print("[!!] Cannot retrieve '%s' emotes\n" % self.streamer)
+					return []
+				else:
+					emo = []
+					for _id in data['images']:
+						if data['images'][_id]['channel'] == self.streamer:
+							emo.append(data['images'][_id]['code'])
+					return emo
 			else:
-				emo = []
-				for _id in data['images']:
-					if data['images'][_id]['channel'] == self.streamer:
-						emo.append(data['images'][_id]['code'])
-				return emo
-		else:
-			data = json.loads(data)
-			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
+				data = json.loads(data)
+				return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
+		except:
+			pass
 
 	# Parsing the utterances, user_lists, time
 	def parsing(self, data):
