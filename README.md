@@ -8,7 +8,7 @@
       
 ## Usage ##
 ```python
-python: __main__.py [-h] [-c] [-n num_topics] streamer
+python __main__.py [-h] [-c] [-n num_topics] streamer
 ```
 ## Result: analysis.csv ##
 In streamer/output directory
@@ -16,9 +16,9 @@ In streamer/output directory
 time, topic, related, emotion, content, comment
 
 content type:
-   - 1: normal conversation
+   - 1: Normal conversation
    - 2: Question
    - 3: Spam
-   - 4: keyword-based text
-   - 5: emote only
-   - 6: Command and Bot
+   - 4: Keyword-based text
+   - 5: Emote only comment
+   - 6: Command and Bot 
