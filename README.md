@@ -15,9 +15,8 @@ In streamer/output directory
 time, topic, related, emotion, content, comment
 
 content type:
-   - 1: Normal conversation
-   - 2: Question
-   - 3: Spam
-   - 4: Keyword-based text
-   - 5: Emote only comment
-   - 6: Command and Bot 
+   - 1: Subscriber only
+   - 2: Normal conversation (without subs)
+   - 3: Question
+   - 4: Spam
+   - 5: Emote only 
