@@ -9,8 +9,8 @@ from DictionaryTagger import DictionaryTagger
 
 class TwitchChatParser:
 
-	inquery = ['what', 'whats','what\'s', 'what\'ve', 'why', 'how', 'how\'s', 'whether', 'when', 'where', 'which', 'who']
-	bi_inquery = ['do you', 'do i', 'do they', 'dont you', 'dont i', 'dont they', 'don\'t you', 'don\'t i', 'don\'t they', 'did you', 'did i', 'did they', 'didnt you', 'didnt i', 'didnt they', 'didn\'t you', 'did\'t i', 'did\'t they', 'arent you', 'aren\'t you', 'arent they', 'aren\'t they','are you', 'will you', 'will i', 'will they', 'can i', 'can they', 'can you', 'cant i', 'cant they', 'cant you', 'can\'t i', 'can\'t they', 'can\'t you', 'couldnt you', 'couldnt i', 'couldnt they', 'couldn\'t you', 'couldn\'t i', 'couldn\'t they', 'have i', 'have you', 'have they', 'havent i', 'havent you', 'havent they', 'haven\'t i', 'haven\'t you', 'haven\'t they', 'are these', 'are those', 'is this', 'is that', 'was this', 'was that']
+	# inquery = ['what', 'whats','what\'s', 'what\'ve', 'why', 'how', 'how\'s', 'whether', 'when', 'where', 'which', 'who']
+	# bi_inquery = ['do you', 'do i', 'do they', 'dont you', 'dont i', 'dont they', 'don\'t you', 'don\'t i', 'don\'t they', 'did you', 'did i', 'did they', 'didnt you', 'didnt i', 'didnt they', 'didn\'t you', 'did\'t i', 'did\'t they', 'arent you', 'aren\'t you', 'arent they', 'aren\'t they','are you', 'will you', 'will i', 'will they', 'can i', 'can they', 'can you', 'cant i', 'cant they', 'cant you', 'can\'t i', 'can\'t they', 'can\'t you', 'couldnt you', 'couldnt i', 'couldnt they', 'couldn\'t you', 'couldn\'t i', 'couldn\'t they', 'have i', 'have you', 'have they', 'havent i', 'havent you', 'havent they', 'haven\'t i', 'haven\'t you', 'haven\'t they', 'are these', 'are those', 'is this', 'is that', 'was this', 'was that']
 	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo"]
 	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage"]
 	robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
@@ -96,10 +96,14 @@ class TwitchChatParser:
 				self.logfile_info['users_list'].append(match.group(4))
 				self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
-				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes], remove_repeated_letters=remove_repeated_letters)
-				self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
-				self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
 
+				# Filter out 'Command' => treat 'command' as empty token list
+				if match.group(7).startswith('!'):
+					self.logfile_info['token_lists'].append([[]])
+				else:
+					tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes], remove_repeated_letters=remove_repeated_letters)
+					self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
+					self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
 			
 	def co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
@@ -128,20 +132,18 @@ class TwitchChatParser:
 		else:
 			print(terms_max[:])
 
-	def set_content(self, keywords, spam_threshold=5):
+	def set_content(self, spam_threshold=6):
 		for i in range(len(self.logfile_info['token_lists'])):
-			content = self._set_content(self.logfile_info['token_lists'][i][0], i, keywords, spam_threshold)
+			content = self._get_content(self.logfile_info['token_lists'][i][0], i, spam_threshold)
 			self.logfile_info['token_lists'][i].append(content)
 		print("[*] content setting finished !")
 
-	# 1: normal conversation, 2: Question, 3: Spam, 4: keyword-based text, 5: emote only, 6: Command and Bot
-	def _set_content(self, tokens, index, keywords, spam_threshold):
-		if len(tokens) > 0:
-			for token in tokens:
-				if token[-1] == 'COMMAND':
-					return '6'
+	# 1:Sub only, 2: Normal conversation(no sub), 3: Question, 4: Spam,  5: emote only
+	def _get_content(self, tokens, index, spam_threshold):
+		if '%' in self.logfile_info['users_list'][index]: # Subscribers
+			return '1'
 
-			# Check keywords first
+		if len(tokens) > 0:
 			emo_only = 1
 			no_emo_tokens = []
 			for token in tokens:
@@ -151,10 +153,6 @@ class TwitchChatParser:
 			
 			if emo_only == 1:
 				return '5'
-
-			for token in tokens:
-				if token[0] in keywords:
-					return '4'
 		
 			# Check Spam (not count emotes)
 			spam_check = defaultdict(int)
@@ -163,19 +161,22 @@ class TwitchChatParser:
 
 			for key in spam_check.keys():
 				if spam_check[key] >= spam_threshold:
-					return '3'
+					return '4'
 			
-			# Question [NEED TO FIX]
-			tokens = [token[0] for token in tokens]
-			for token in tokens:
-				if token in self.inquery:
-					return '2'
+			# [NEED TO FIX]
+			if '?' in tokens:
+				return '3'
 
-			for bigram in ngrams(tokens, 2):
-				if ' '.join(bigram) in self.bi_inquery:
-					return '2'
+			# tokens = [token[0] for token in tokens]
+			# for token in tokens:
+			# 	if token in self.inquery:
+			# 		return '2'
 
-		return '1'
+			# for bigram in ngrams(tokens, 2):
+			# 	if ' '.join(bigram) in self.bi_inquery:
+			# 		return '2'
+
+		return '2'
 
 	def _update_emotes(self, emote_dir): 
 		# store "lower-case" emotion and its emo-score
@@ -321,6 +322,5 @@ class TwitchChatParser:
 								 'content': self.logfile_info['token_lists'][i][1],
 								 'comment': self.logfile_info['utterances'][i]
 								 })
-
 
 

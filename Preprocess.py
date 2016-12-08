@@ -18,7 +18,7 @@ emoticons_str = r"""
 regex_str = [
 	emoticons_str,
 	r'<3',	# heart
-	r'(?:!\w+)', # Command
+	r'\?',	# Question !?
 	r'(?:@[\w_]+)', # @-mentions
 	r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)", # hash-tags
 	r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
@@ -35,10 +35,10 @@ class Preprocessor:
 	tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 	emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
 
-
 	def __init__(self):
 		try:
 			self.stops.remove('not')
+			self.puncs.remove('?')
 		except:
 			pass
 
@@ -96,8 +96,6 @@ class Preprocessor:
 				tokens_p.append((token, "HASHTAG"))
 			elif token.startswith('http'):
 				tokens_p.append((token, "URL"))
-			elif token.startswith('!'): # [NEED TO FIX] !gamble 1000 ==> should 1000 be marked as command ???
-				tokens_p.append((token, "COMMAND"))
 			elif self.emoticon_re.search(token):
 				tokens_p.append((token, "EMOTICON"))
 			else:

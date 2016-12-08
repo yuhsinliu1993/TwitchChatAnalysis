@@ -42,7 +42,7 @@ def main(**kwargs):
 	else:
 		data = text_parser.load_log_from_dir(log_dir)
 	text_parser.parsing(data, remove_repeated_letters=True)
-	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
+	text_parser.set_content()
 	
 	# [??] Should I get rid of "EMOTICON" word in parsed log
 	# [??] Remove "Command and Bot's answer"
