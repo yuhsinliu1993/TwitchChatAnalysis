@@ -30,7 +30,7 @@ regex_str = [
 
 class Preprocessor:
 
-	stops = get_stop_words('en') + ['via', 'im', 'u']
+	stops = get_stop_words('en') + ['via', 'im', 'u', 'can']
 	puncs = list(string.punctuation)
 	tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 	emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
@@ -45,7 +45,7 @@ class Preprocessor:
 	def sentence_to_tokens(self, sentence):
 		return self.tokens_re.findall(sentence)
 
-	def tokenization(self, sentence, emo_list, lowercase=True, no_repeated_term=False, remove_repeated_letters=False, remove_abbreviation=False, remove_stops=True, remove_punc=True):
+	def tokenization(self, sentence, emo_list, lowercase=True, no_repeated_term=False, remove_repeated_letters=True, remove_abbreviation=False, remove_stops=True, remove_punc=True):
 		"""
 			Rules:
 				1. 

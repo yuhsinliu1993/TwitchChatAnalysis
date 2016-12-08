@@ -5,6 +5,7 @@ def _get_kwargs():
 	parser.add_argument("streamer",type=str, help="Specify a streamer's twitch name")	
 	parser.add_argument("-c", "--clean", action='store_true', help="clean the unuseful data")
 	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
+	parser.add_argument("-f", "--file", type=str, help="Indicate log file location")
 	return vars(parser.parse_args())
 
 def main(**kwargs):
@@ -36,9 +37,11 @@ def main(**kwargs):
 
 	# ==== Starting Parse the log =====
 	text_parser = TwitchChatParser(streamer=streamer)
-	# data = text_parser.load_log_from_dir(log_dir)
-	data = text_parser.load_logfile(os.path.join(streamerDir, 'log', 'riotgames1.log'))
-	text_parser.parsing(data)
+	if 'file' in kwargs:
+		data = text_parser.load_logfile(kwargs['file'])
+	else:
+		data = text_parser.load_log_from_dir(log_dir)
+	text_parser.parsing(data, remove_repeated_letters=True)
 	text_parser.set_content(_local['keywords'], _global['spam_threshold'])
 	
 	# [??] Should I get rid of "EMOTICON" word in parsed log
@@ -70,7 +73,7 @@ def main(**kwargs):
 	# VIDEO_LENGTH = 
 
 	if kwargs['clean']:
-		call(['rm', '-rf', streamerDir+'/output/doc_wids.txt'])
+		call(['rm', streamerDir+'/output/doc_wids.txt'])
 
 
 if __name__ == '__main__':

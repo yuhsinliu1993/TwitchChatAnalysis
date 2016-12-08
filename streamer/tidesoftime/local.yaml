@@ -1,9 +1,12 @@
-streamer:
+streamer: tidesoftime
 
-playing: 
+playing: hearthstone
 
-log_dir: 
+streamerDir: /Users/Michaeliu/Twitch/streamer/tidesoftime
 
-num_topics: 
+logDir: /Users/Michaeliu/Twitch/streamer/tidesoftime/log
 
-keywords:
+keywords: # the words you want to highlight in the entire log  
+  - hearthstone
+  - deck
+  - decklist

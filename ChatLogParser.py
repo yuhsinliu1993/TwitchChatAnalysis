@@ -31,7 +31,11 @@ class TwitchChatParser:
 		self.logfile_info['count_tokens'] = Counter()
 		self.emotes = []
 		self.streamer = streamer
-		self.streamer_emotes = self._get_streamer_emote()
+		try:
+			self.streamer_emotes = self._get_streamer_emote()
+		except:
+			self.streamer_emotes = None
+
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
 		self.preprocess = Preprocessor()
 		self.can_set_topics = []
@@ -57,31 +61,28 @@ class TwitchChatParser:
 		return data
 
 	def _get_streamer_emote(self):
-		try:
-			response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
+		response = urlopen("https://twitchemotes.com/api_cache/v2/subscriber.json")
+		data = response.read().decode("utf-8")
+		if data == '':
+			response = urlopen('https://twitchemotes.com/api_cache/v2/images.json')
 			data = response.read().decode("utf-8")
+			data = json.loads(data)
+			
 			if data == '':
-				response = urlopen('https://twitchemotes.com/api_cache/v2/images.json')
-				data = response.read().decode("utf-8")
-				data = json.loads(data)
-				
-				if data == '':
-					print("[!!] Cannot retrieve '%s' emotes\n" % self.streamer)
-					return []
-				else:
-					emo = []
-					for _id in data['images']:
-						if data['images'][_id]['channel'] == self.streamer:
-							emo.append(data['images'][_id]['code'])
-					return emo
+				print("[!!] Cannot retrieve '%s' emotes\n" % self.streamer)
+				return []
 			else:
-				data = json.loads(data)
-				return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
-		except:
-			pass
+				emo = []
+				for _id in data['images']:
+					if data['images'][_id]['channel'] == self.streamer:
+						emo.append(data['images'][_id]['code'])
+				return emo
+		else:
+			data = json.loads(data)
+			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
-	def parsing(self, data):
+	def parsing(self, data, remove_repeated_letters=False):
 		print("[*] Parsing the data ...")
 		set_ref_time = 0
 		for line in data:
@@ -95,7 +96,7 @@ class TwitchChatParser:
 				self.logfile_info['users_list'].append(match.group(4))
 				self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
-				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes])
+				tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes], remove_repeated_letters=remove_repeated_letters)
 				self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 				self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
 

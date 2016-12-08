@@ -1,9 +1,11 @@
-streamer:
+streamer: riotgames
 
-playing: 
+playing: league of legend
 
-log_dir: 
+streamerDir: /Users/Michaeliu/Twitch/streamer/riotgames
 
-num_topics: 
+logDir: /Users/Michaeliu/Twitch/streamer/riotgames/log
 
-keywords:
+keywords: # the words you want to highlight in the entire log  
+  - riotgames
+  - league of legend
