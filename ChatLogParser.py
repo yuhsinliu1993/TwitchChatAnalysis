@@ -250,13 +250,27 @@ class TwitchChatParser:
 				self.logfile_info['token_lists'][i].append(0)
 		print("[*] sentiment analysis setting finished !")
 
-	def save_parsed_log(self, save_f):
+	def save_parsed_log(self, save_f, no_emotes=False):
 		# Save the cleaned log (filter out 'URL', repeapted letters, punctuations)
 		# Save file to ../{streamer}/cleaned_logs_dir/cleaned_{streamer}.txt
 		with open(save_f, 'w') as f:
 			for i in range(len(self.logfile_info['token_lists'])):
 				if len(self.logfile_info['token_lists'][i][0]) > 0:
-					line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] != 'URL'])
+					line = ''
+					for token in self.logfile_info['token_lists'][i][0]:
+						if token[0] != '?':
+							if no_emotes:
+								if token[-1] not in ('URL', 'EMOTICON'):
+									line += ' ' + token[0]
+							else:
+								if token[-1] != 'URL':
+									line += ' ' + token[0]
+					line = line.strip()
+					# if no_emotes:
+					# 	line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] not in ('URL', 'EMOTICON') or tokens[0] != '?'])
+					# else:
+					# 	line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] != 'URL' or tokens[0] != '?'])
+					
 					if len(line) > 0:
 						self.logfile_info['token_lists'][i].append('Kept')
 						f.write(line+'\n')

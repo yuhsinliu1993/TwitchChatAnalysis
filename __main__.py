@@ -47,7 +47,7 @@ def main(**kwargs):
 	# [??] Should I get rid of "EMOTICON" word in parsed log
 	# [??] Remove "Command and Bot's answer"
 	# [??] Filter out the token which appears only one time
-	text_parser.save_parsed_log(saved_log_path) 
+	text_parser.save_parsed_log(saved_log_path, no_emotes=True)
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
 
