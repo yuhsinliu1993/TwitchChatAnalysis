@@ -9,8 +9,6 @@ from DictionaryTagger import DictionaryTagger
 
 class TwitchChatParser:
 
-	# inquery = ['what', 'whats','what\'s', 'what\'ve', 'why', 'how', 'how\'s', 'whether', 'when', 'where', 'which', 'who']
-	# bi_inquery = ['do you', 'do i', 'do they', 'dont you', 'dont i', 'dont they', 'don\'t you', 'don\'t i', 'don\'t they', 'did you', 'did i', 'did they', 'didnt you', 'didnt i', 'didnt they', 'didn\'t you', 'did\'t i', 'did\'t they', 'arent you', 'aren\'t you', 'arent they', 'aren\'t they','are you', 'will you', 'will i', 'will they', 'can i', 'can they', 'can you', 'cant i', 'cant they', 'cant you', 'can\'t i', 'can\'t they', 'can\'t you', 'couldnt you', 'couldnt i', 'couldnt they', 'couldn\'t you', 'couldn\'t i', 'couldn\'t they', 'have i', 'have you', 'have they', 'havent i', 'havent you', 'havent they', 'haven\'t i', 'haven\'t you', 'haven\'t they', 'are these', 'are those', 'is this', 'is that', 'was this', 'was that']
 	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo"]
 	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage"]
 	robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
@@ -100,6 +98,8 @@ class TwitchChatParser:
 				# Filter out 'Command' => treat 'command' as empty token list
 				if match.group(7).startswith('!'):
 					self.logfile_info['token_lists'].append([[]])
+				elif match.group(4).startswith('^'): # Filter out Bot's reply 
+					self.logfile_info['token_lists'].append([[]])
 				else:
 					tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes], remove_repeated_letters=remove_repeated_letters)
 					self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
@@ -167,15 +167,6 @@ class TwitchChatParser:
 			if '?' in tokens:
 				return '3'
 
-			# tokens = [token[0] for token in tokens]
-			# for token in tokens:
-			# 	if token in self.inquery:
-			# 		return '2'
-
-			# for bigram in ngrams(tokens, 2):
-			# 	if ' '.join(bigram) in self.bi_inquery:
-			# 		return '2'
-
 		return '2'
 
 	def _update_emotes(self, emote_dir): 
@@ -183,13 +174,6 @@ class TwitchChatParser:
 		i = 0
 		for fn in os.listdir(emote_dir):
 			with open(os.path.join(emote_dir, fn), 'r') as f:
-				# reader = csv.reader(f)
-				# emotes = list(reader)
-				# for emo in emotes[1:]:
-				# 	if emo[0] in self.streamer_emotes:
-				# 		self.emotes.append([emo[0].lower(), '1'])
-				# 	else:	
-				# 		self.emotes.append([emo[0].lower(), emo[1]])
 				emo = line[:-1].split(',')
 				if emo[0] in self.streamer_emotes:
 					self.emotes.append([emo[0].lower(), '1'])
@@ -266,10 +250,6 @@ class TwitchChatParser:
 								if token[-1] != 'URL':
 									line += ' ' + token[0]
 					line = line.strip()
-					# if no_emotes:
-					# 	line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] not in ('URL', 'EMOTICON') or tokens[0] != '?'])
-					# else:
-					# 	line = ' '.join([tokens[0] for tokens in self.logfile_info['token_lists'][i][0] if tokens[-1] != 'URL' or tokens[0] != '?'])
 					
 					if len(line) > 0:
 						self.logfile_info['token_lists'][i].append('Kept')
@@ -278,7 +258,6 @@ class TwitchChatParser:
 						self.logfile_info['token_lists'][i].append('Notkept')
 				else:
 					self.logfile_info['token_lists'][i].append('Notkept')
-
 
 		print("[*] Save the parsed logs to %s" % save_f)
 	
@@ -336,5 +315,4 @@ class TwitchChatParser:
 								 'content': self.logfile_info['token_lists'][i][1],
 								 'comment': self.logfile_info['utterances'][i]
 								 })
-
 

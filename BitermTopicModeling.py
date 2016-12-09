@@ -78,7 +78,7 @@ class BTM:
 					t_distributions.append(i+1)
 
 		if show:
-			print("================ Topic Display ================")
+			print("\n================ Topic Display ================")
 			print("K\tp(z)\t\tTop words")
 			for key in self.topics_dict:
 				print('%d\t%f\t%s' % (key+1, self.topics_dict[key][0], self.topics_dict[key][1]))

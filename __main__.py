@@ -44,13 +44,10 @@ def main(**kwargs):
 	text_parser.parsing(data, remove_repeated_letters=True)
 	text_parser.set_content()
 	
-	# [??] Should I get rid of "EMOTICON" word in parsed log
-	# [??] Remove "Command and Bot's answer"
 	# [??] Filter out the token which appears only one time
 	text_parser.save_parsed_log(saved_log_path, no_emotes=True)
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
-
 	
 	# ==== Bursty Biterm Topic Modeling ====
 	biterm = BTM(num_topics=kwargs['num_topics'])

@@ -12,15 +12,17 @@ model_dir=${output_dir}model/
 dwid_pt=${output_dir}doc_wids.txt
 voca_pt=${output_dir}vocabulary.txt
 
+echo ""
 echo "=============== Topic Learning ============="
 W=`wc -l < $voca_pt` # vocabulary size
-echo "./src/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir"
+echo "run ./src/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir"
 ./src/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir
 
 
 # infer p(z|d) for each doc
+echo ""
 echo "================ Infer P(z|d)==============="
-echo "./BTM/src/btm inf sum_b $K $dwid_pt $model_dir"
+echo "run ./BTM/src/btm inf sum_b $K $dwid_pt $model_dir"
 ./BTM/src/btm inf sum_b $K $dwid_pt $model_dir
 
 
