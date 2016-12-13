@@ -41,7 +41,7 @@ def main(**kwargs):
 		data = text_parser.load_logfile(kwargs['file'])
 	else:
 		data = text_parser.load_log_from_dir(log_dir)
-	text_parser.parsing(data, remove_repeated_letters=True)
+	text_parser.parsing(data, output_dir, remove_repeated_letters=True)
 	text_parser.set_content()
 	
 	# [??] Filter out the token which appears only one time
@@ -58,7 +58,7 @@ def main(**kwargs):
 	call(['bash', 'run.sh', str(kwargs['num_topics']), streamer])
 
 	topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
-	text_parser.set_topics(topics) 
+	text_parser.set_topics(topics, kwargs['num_topics']) 
 	text_parser.set_relation(threshold=0.01)
 	text_parser.save_analysis(output_dir)
 	

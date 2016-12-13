@@ -27,7 +27,8 @@ class TwitchChatParser:
 		self.logfile_info['users_list'] = []
 		self.logfile_info['time'] = []
 		self.logfile_info['count_tokens'] = Counter()
-		self.emotes = []
+		self.emotes = self.__fetch_emotes()
+
 		self.streamer = streamer
 		try:
 			self.streamer_emotes = self._get_streamer_emote()
@@ -35,9 +36,7 @@ class TwitchChatParser:
 			self.streamer_emotes = None
 
 		self.co_matrix = defaultdict(lambda : defaultdict(int))
-		self.preprocess = Preprocessor()
-		self.can_set_topics = []
-		self.fetch_emotes()
+		self.preprocess = Preprocessor(emotes=[emo for (emo, score) in self.emotes])
 
 	def load_log_from_dir(self, dir_path):
 		data = []
@@ -80,9 +79,13 @@ class TwitchChatParser:
 			return [emo['code'].lower() for emo in data['channels'][self.streamer]['emotes']]
 
 	# Parsing the utterances, user_lists, time
-	def parsing(self, data, remove_repeated_letters=False):
+	def parsing(self, data, out_dir, remove_repeated_letters=False):
 		print("[*] Parsing the data ...")
 		set_ref_time = 0
+		comments = open(os.path.join(out_dir, 'comments.txt'), 'w')
+		usernames = open(os.path.join(out_dir, 'usernames.txt'), 'w')
+		times = []
+
 		for line in data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
 			match = re.match(r'\[(\d+):(\d+):(\d+)\]\s<(([\+|%|@|\^|~]+)?(\w+))>\s(.*)', line)
@@ -92,8 +95,11 @@ class TwitchChatParser:
 					set_ref_time = 1
 					
 				self.logfile_info['users_list'].append(match.group(4))
-				self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
+				#self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
+				times.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
+				comments.write(match.group(7)+'\r\n')
+				usernames.write(match.group(4)+'\r\n')
 
 				# Filter out 'Command' => treat 'command' as empty token list
 				if match.group(7).startswith('!'):
@@ -101,10 +107,36 @@ class TwitchChatParser:
 				elif match.group(4).startswith('^'): # Filter out Bot's reply 
 					self.logfile_info['token_lists'].append([[]])
 				else:
-					tokens_p = self.preprocess.tokenization(match.group(7), [emo for (emo, score) in self.emotes], remove_repeated_letters=remove_repeated_letters)
+					tokens_p = self.preprocess.tokenization(match.group(7), remove_repeated_letters=remove_repeated_letters)
 					self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 					self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
+
+		self._adjust_time(times)
+		comments.close()
+		usernames.close()
+		
+	def _adjust_time(self, times):
+		count = 0
+		i = 0
+		curr = times[0]
+		
+		while(True):
+			if i >= len(times):
+				offset = 1 / count
+				for k in range(count):
+					self.logfile_info['time'].append(curr + offset*k)
+				break
 			
+			if times[i] == curr:
+				count += 1
+				i += 1
+			else:
+				offset = 1 / count
+				for k in range(count):
+					self.logfile_info['time'].append(curr + offset*k)
+				curr = times[i]
+				count = 0
+
 	def co_occurrence_matrix(self):
 		# co_matrix: contain the number of times that the term x has been seen in the same utterance as the term y
 		# Also, we don’t count the same term pair twice, e.g. co_matrix[A][B] == co_matrix[B][A]
@@ -189,8 +221,9 @@ class TwitchChatParser:
 				return -1
 		return 0	
 
-	def fetch_emotes(self):
+	def __fetch_emotes(self):
 		# Retrieve data from sub emotes
+		emotes = []
 		url = "https://twitchemotes.com/api_cache/v2/subscriber.json"
 		response = urlopen(url)
 		data = response.read().decode("utf-8")
@@ -199,11 +232,11 @@ class TwitchChatParser:
 		for key in data['channels'].keys():
 			for c in data['channels'][key]['emotes']:
 				emo = c['code'].lower()
-				self.emotes.append((emo, self._check_sentiment(emo)))
+				emotes.append((emo, self._check_sentiment(emo)))
 
 		for c in data['unknown_emotes']['emotes']:
 			emo = c['code'].lower()
-			self.emotes.append((emo, self._check_sentiment(emo)))
+			emotes.append((emo, self._check_sentiment(emo)))
 
 		# Retrieve data from global emotes
 		url = 'https://twitchemotes.com/api_cache/v2/global.json'
@@ -213,12 +246,14 @@ class TwitchChatParser:
 
 		for key in data['emotes']:
 			emo = key.lower()
-			self.emotes.append((emo, self._check_sentiment(emo)))
+			emotes.append((emo, self._check_sentiment(emo)))
 
 		# write robot_emotes to global
 		for robot in self.robot_emotes:
 			emo = key.lower()
-			self.emotes.append((emo, self._check_sentiment(emo)))
+			emotes.append((emo, self._check_sentiment(emo)))
+
+		return emotes
 		
 	def dictionary_tagger(self, sentiment_files):
 		tagger = DictionaryTagger(sentiment_files)
@@ -261,15 +296,15 @@ class TwitchChatParser:
 
 		print("[*] Save the parsed logs to %s" % save_f)
 	
-	def set_topics(self, topics):
-		# topic: 1 ~ num_topics
+	def set_topics(self, topics, num_topics):
+		
 		k = 0
 		for i in range(len(self.logfile_info['token_lists'])):
-			if 'Kept' in self.logfile_info['token_lists'][i]:
+			if 'Kept' in self.logfile_info['token_lists'][i]: 	# topic: 1 ~ num_topics
 				self.logfile_info['token_lists'][i].append(str(topics[k]))
 				k += 1
-			else:
-				self.logfile_info['token_lists'][i].append('0')
+			else:	# topic: num_topics + 1 (for other topics that are not being analyzed)
+				self.logfile_info['token_lists'][i].append(str(int(num_topics)+1))
 
 		print("[*] topics setting finished !")
 
@@ -308,7 +343,8 @@ class TwitchChatParser:
 			writer.writeheader()
 
 			for i in range(len(self.logfile_info['token_lists'])):
-				writer.writerow({'time': str(self.logfile_info['time'][i]),
+				time = '%.5f' % self.logfile_info['time'][i]
+				writer.writerow({'time': time,
 								 'topic': self.logfile_info['token_lists'][i][4],
 								 'related': self.logfile_info['token_lists'][i][5],
 								 'emotion': str(self.logfile_info['token_lists'][i][3]),

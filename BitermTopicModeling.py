@@ -31,7 +31,7 @@ class BTM:
 	def save_word2id(self, out_file):
 		with open(out_file, 'w') as f:
 			for word, _id in sorted(self.word2id.items(), key=lambda d:d[1]):
-				f.write('%d\t%s\n' % (_id, word))		
+				f.write('%d\t%s\r\n' % (_id, word))		
 		print('[*] Write vocabulary file: %s' % out_file)
 
 	def load_vocabulary(self, path_dir):
@@ -95,7 +95,7 @@ class BTM:
 		with open(out_file, 'w') as wf:
 			for key, val in self.topics_dict.items():
 			    topics = ' '.join([t_p.rsplit(':', 1)[0] for t_p in val[1].split() if float(t_p.rsplit(':', 1)[-1]) >= threshold])
-			    wf.write(topics+'\n')
+			    wf.write(topics+'\r\n')
 
 
 class BBTM:

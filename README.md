@@ -7,7 +7,8 @@
       
 ## Usage ##
 ```python
-python __main__.py [-h] [-c] [-n num_topics] streamer
+usage: . [-h] [-c] [-n num_topics] [-f file] streamer
+-f --file: indicate the location of log file  
 ```
 ## Result: analysis.csv ##
 In streamer/output directory

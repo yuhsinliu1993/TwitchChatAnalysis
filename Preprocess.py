@@ -35,17 +35,19 @@ class Preprocessor:
 	tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 	emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
 
-	def __init__(self):
+	def __init__(self, emotes):
 		try:
 			self.stops.remove('not')
 			self.puncs.remove('?')
 		except:
 			pass
 
+		self.emotes = emotes
+
 	def sentence_to_tokens(self, sentence):
 		return self.tokens_re.findall(sentence)
 
-	def tokenization(self, sentence, emo_list, lowercase=True, no_repeated_term=False, remove_repeated_letters=True, remove_abbreviation=False, remove_stops=True, remove_punc=True):
+	def tokenization(self, sentence, lowercase=True, no_repeated_term=False, remove_repeated_letters=True, remove_abbreviation=False, remove_stops=True, remove_punc=True):
 		"""
 			Rules:
 				1. 
@@ -75,7 +77,7 @@ class Preprocessor:
 		if remove_stops:
 			tokens = [token for token in tokens if token not in self.stops]
 
-		tokens_p = self.placeholder(tokens, emo_list)
+		tokens_p = self.placeholder(tokens)
 
 		if remove_repeated_letters:
 			tokens_p = [(re.sub(r'(.)\1+', r'\1', token), p) if p not in ('URL', 'HASHTAG', 'EMOTICON') else (token, p) for (token, p) in tokens_p]
@@ -86,11 +88,11 @@ class Preprocessor:
 		return tokens_p
 
 
-	def placeholder(self, tokens, emo_list):
+	def placeholder(self, tokens):
 		tokens_p = []
 		
 		for token in tokens:
-			if token in emo_list:
+			if token in self.emotes:
 				tokens_p.append((token, "EMOTICON"))
 			elif token.startswith('#'):
 				tokens_p.append((token, "HASHTAG"))
