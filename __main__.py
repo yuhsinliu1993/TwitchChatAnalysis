@@ -45,7 +45,7 @@ def main(**kwargs):
 	text_parser.set_content()
 	
 	# [??] Filter out the token which appears only one time
-	text_parser.save_parsed_log(saved_log_path, no_emotes=True)
+	text_parser.save_parsed_log(saved_log_path, no_emotes=True, filter_1=True)
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
 	
