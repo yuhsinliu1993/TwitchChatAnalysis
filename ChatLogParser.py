@@ -143,20 +143,20 @@ class TwitchChatParser:
 		# EX: co_matrix['bronze'] =  defaultdict(int, {'chat': 2, 'four': 72, 'kickman': 2, 'lol': 2, 'lp': 2, 'lul': 74, 'vannie': 30, 'w': 2})
 		# 	  the utteranes that contains 'bronze' has been seen the 'chat' term twice and 'four' term 72 times...
 		for sentence in self.logfile_info['token_lists']:
-		    if len(sentence[0]) > 0:
-		        for i in range(len(sentence[0])-1):
-		            for j in range(i+1, len(sentence[0])):
-		                w1, w2 = sorted([sentence[0][i][0], sentence[0][j][0]]) 
-		                if w1 != w2:
-		                    self.co_matrix[w1][w2] += 1
+			if len(sentence[0]) > 0:
+				for i in range(len(sentence[0])-1):
+					for j in range(i+1, len(sentence[0])):
+						w1, w2 = sorted([sentence[0][i][0], sentence[0][j][0]]) 
+						if w1 != w2:
+							self.co_matrix[w1][w2] += 1
 		
 	def most_common_cooccurrent_terms(self, n=5):
 		com_max = []
 		# For each term, look for the most common co-occurrent terms
 		for t1 in self.co_matrix:
-		    t1_max_terms = sorted(self.co_matrix[t1].items(), key=operator.itemgetter(1), reverse=True)[:5]
-		    for t2, t2_count in t1_max_terms:
-		        com_max.append(((t1, t2), t2_count))
+			t1_max_terms = sorted(self.co_matrix[t1].items(), key=operator.itemgetter(1), reverse=True)[:5]
+			for t2, t2_count in t1_max_terms:
+				com_max.append(((t1, t2), t2_count))
 		# Get the most frequent co-occurrences
 		terms_max = sorted(com_max, key=operator.itemgetter(1), reverse=True)
 		if n <= len(terms_max):
@@ -222,36 +222,47 @@ class TwitchChatParser:
 		return 0	
 
 	def __fetch_emotes(self):
-		# Retrieve data from sub emotes
 		emotes = []
-		url = "https://twitchemotes.com/api_cache/v2/subscriber.json"
-		response = urlopen(url)
+		emotelist = [':)',':(',':o',':z','B)',':/',';)',';p',':p',';P',':P','R)','o_O','O_O','o_o','O_o',':D','>(','<3']
+		response = urlopen('https://api.twitch.tv/kraken/chat/emoticon_images')
 		data = response.read().decode("utf-8")
 		data = json.loads(data)
+		for emote in data['emoticons']:
+			emotelist.append(emote['code'])
 
-		for key in data['channels'].keys():
-			for c in data['channels'][key]['emotes']:
-				emo = c['code'].lower()
-				emotes.append((emo, self._check_sentiment(emo)))
-
-		for c in data['unknown_emotes']['emotes']:
-			emo = c['code'].lower()
+		for emo in emotelist:
 			emotes.append((emo, self._check_sentiment(emo)))
+		
+		# # Retrieve data from sub emotes
+		# emotes = []
+		# url = "https://twitchemotes.com/api_cache/v2/subscriber.json"
+		# response = urlopen(url)
+		# data = response.read().decode("utf-8")
+		# data = json.loads(data)
 
-		# Retrieve data from global emotes
-		url = 'https://twitchemotes.com/api_cache/v2/global.json'
-		response = urlopen(url)
-		data = response.read().decode("utf-8")
-		data = json.loads(data)
+		# for key in data['channels'].keys():
+		# 	for c in data['channels'][key]['emotes']:
+		# 		emo = c['code'].lower()
+		# 		emotes.append((emo, self._check_sentiment(emo)))
 
-		for key in data['emotes']:
-			emo = key.lower()
-			emotes.append((emo, self._check_sentiment(emo)))
+		# for c in data['unknown_emotes']['emotes']:
+		# 	emo = c['code'].lower()
+		# 	emotes.append((emo, self._check_sentiment(emo)))
 
-		# write robot_emotes to global
-		for robot in self.robot_emotes:
-			emo = key.lower()
-			emotes.append((emo, self._check_sentiment(emo)))
+		# # Retrieve data from global emotes
+		# url = 'https://twitchemotes.com/api_cache/v2/global.json'
+		# response = urlopen(url)
+		# data = response.read().decode("utf-8")
+		# data = json.loads(data)
+
+		# for key in data['emotes']:
+		# 	emo = key.lower()
+		# 	emotes.append((emo, self._check_sentiment(emo)))
+
+		# # write robot_emotes to global
+		# for robot in self.robot_emotes:
+		# 	emo = key.lower()
+		# 	emotes.append((emo, self._check_sentiment(emo)))
 
 		return emotes
 		

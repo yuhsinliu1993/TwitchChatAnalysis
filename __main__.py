@@ -42,7 +42,7 @@ def main(**kwargs):
 	else:
 		data = text_parser.load_log_from_dir(log_dir)
 	text_parser.parsing(data, output_dir, remove_repeated_letters=True)
-	text_parser.set_content()
+	text_parser.set_content(spam_threshold=_local['spam_threshold'])
 	
 	# [??] Filter out the token which appears only one time
 	text_parser.save_parsed_log(saved_log_path, no_emotes=True, filter_1=True)
@@ -59,7 +59,7 @@ def main(**kwargs):
 
 	topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
 	text_parser.set_topics(topics, kwargs['num_topics']) 
-	text_parser.set_relation(threshold=0.01)
+	text_parser.set_relation(threshold=_local['relation_threshold'])
 	text_parser.save_analysis(output_dir)
 	
 

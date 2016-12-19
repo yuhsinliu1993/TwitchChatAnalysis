@@ -6,6 +6,10 @@ streamerDir: /Users/Michaeliu/Twitch/streamer/reckful
 
 logDir: /Users/Michaeliu/Twitch/streamer/reckful/log
 
+spam_threshold: 6
+
+relation_threshold: 0.01
+
 keywords: # the words you want to highlight in the entire log  
   - hearthstone
   - deck
