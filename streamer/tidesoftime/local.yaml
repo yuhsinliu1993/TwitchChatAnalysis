@@ -6,6 +6,10 @@ streamerDir: /Users/Michaeliu/Twitch/streamer/tidesoftime
 
 logDir: /Users/Michaeliu/Twitch/streamer/tidesoftime/log
 
+spam_threshold: 6
+
+relation_threshold: 0.008
+
 keywords: # the words you want to highlight in the entire log  
   - hearthstone
   - deck

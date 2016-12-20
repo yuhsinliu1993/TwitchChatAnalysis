@@ -6,6 +6,10 @@ streamerDir: /Users/Michaeliu/Twitch/streamer/riotgames
 
 logDir: /Users/Michaeliu/Twitch/streamer/riotgames/log
 
+spam_threshold: 6
+
+relation_threshold: 0.01
+
 keywords: # the words you want to highlight in the entire log  
   - riotgames
   - league of legend

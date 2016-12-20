@@ -9,7 +9,7 @@ from DictionaryTagger import DictionaryTagger
 
 class TwitchChatParser:
 
-	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo"]
+	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'kappa', 'GoldenKappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo"]
 	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage"]
 	robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
 
@@ -27,7 +27,7 @@ class TwitchChatParser:
 		self.logfile_info['users_list'] = []
 		self.logfile_info['time'] = []
 		self.logfile_info['count_tokens'] = Counter()
-		self.emotes = self.__fetch_emotes()
+		self.emotes = self.__fetch_emotes('TwitchEmotesPics')
 
 		self.streamer = streamer
 		try:
@@ -91,12 +91,12 @@ class TwitchChatParser:
 			match = re.match(r'\[(\d+):(\d+):(\d+)\]\s<(([\+|%|@|\^|~]+)?(\w+))>\s(.*)', line)
 			if match:
 				if not set_ref_time:
-					self.logfile_info['ref_time'] = (int(match.group(1))+int(match.group(2)))*60 + int(match.group(3))
+					self.logfile_info['ref_time'] = int(match.group(1))*3600 + int(match.group(2))*60 + int(match.group(3))
 					set_ref_time = 1
 					
 				self.logfile_info['users_list'].append(match.group(4))
 				#self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
-				times.append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
+				times.append(int(match.group(1))*3600 + int(match.group(2))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
 				self.logfile_info['utterances'].append(match.group(7))
 				comments.write(match.group(7)+'\r\n')
 				usernames.write(match.group(4)+'\r\n')
@@ -221,17 +221,20 @@ class TwitchChatParser:
 				return -1
 		return 0	
 
-	def __fetch_emotes(self):
+	def __fetch_emotes(self, path):
 		emotes = []
 		emotelist = [':)',':(',':o',':z','B)',':/',';)',';p',':p',';P',':P','R)','o_O','O_O','o_o','O_o',':D','>(','<3']
-		response = urlopen('https://api.twitch.tv/kraken/chat/emoticon_images')
-		data = response.read().decode("utf-8")
-		data = json.loads(data)
-		for emote in data['emoticons']:
-			emotelist.append(emote['code'])
+		# response = urlopen('https://api.twitch.tv/kraken/chat/emoticon_images')
+		# data = response.read().decode("utf-8")
+		# data = json.loads(data)
+		# for emote in data['emoticons']:
+		# 	emotelist.append(emote['code'])
+
+		for fn in os.listdir(path):
+			emotelist.append(os.path.splitext(fn)[0])
 
 		for emo in emotelist:
-			emotes.append((emo, self._check_sentiment(emo)))
+			emotes.append((emo, self._check_sentiment(emo.lower())))
 		
 		# # Retrieve data from sub emotes
 		# emotes = []
