@@ -26,7 +26,10 @@ time, topic, related, emotion, content, comment
 
 content type:
    - 1: Subscriber only
-   - 2: Normal conversation (without subs)
-   - 3: Question
-   - 4: Spam
-   - 5: Emote only 
+   - 2: Emote only
+   - 3: Bot and Command
+   - 4: Question
+   - 5: Normal conversation (without subs)
+   - 6: Self-defined keywords
+
+## Topin ##
