@@ -7,8 +7,17 @@
       
 ## Usage ##
 ```python
-usage: . [-h] [-c] [-n num_topics] [-f file] streamer
--f --file: indicate the location of log file  
+usage: . [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
+
+positional arguments:
+  streamer     Specify a streamer's twitch name
+
+optional arguments:
+  -h     show this help message and exit
+  -c     clean the unuseful data
+  -n     Specify the num of topics for LDA modeling
+  -f     Indicate log file location
+  -e     emotes join topic modeling
 ```
 ## Result: analysis.csv ##
 In streamer/output directory
