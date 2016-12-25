@@ -1,9 +1,3 @@
-streamer:
+spam_threshold: 4
 
-playing: 
-
-log_dir: 
-
-num_topics: 
-
-keywords:
+relation_threshold: 0.01

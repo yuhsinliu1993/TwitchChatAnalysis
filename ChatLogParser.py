@@ -28,6 +28,8 @@ class TwitchChatParser:
 		self.logfile_info['time'] = []
 		self.logfile_info['count_tokens'] = Counter()
 		self.emotes = self.__fetch_emotes('TwitchEmotesPics')
+		self.kept_index = []
+		self.command_or_bot_index = []
 
 		self.streamer = streamer
 		try:
@@ -85,6 +87,7 @@ class TwitchChatParser:
 		comments = open(os.path.join(out_dir, 'comments.txt'), 'w')
 		usernames = open(os.path.join(out_dir, 'usernames.txt'), 'w')
 		times = []
+		i = 0
 
 		for line in data:
 			# +:Turbo, %:Sub, @:Mod, ^:Bot, ~:Streamer
@@ -102,14 +105,18 @@ class TwitchChatParser:
 				usernames.write(match.group(4)+'\r\n')
 
 				# Filter out 'Command' => treat 'command' as empty token list
-				if match.group(7).startswith('!'):
+				if match.group(7).startswith('!') or '^' in match.group(4):
 					self.logfile_info['token_lists'].append([[]])
-				elif match.group(4).startswith('^'): # Filter out Bot's reply 
-					self.logfile_info['token_lists'].append([[]])
+					self.command_or_bot_index.append(i)
+				# elif: # Bot's reply 
+				# 	self.logfile_info['token_lists'].append([[]])
 				else:
 					tokens_p = self.preprocess.tokenization(match.group(7), remove_repeated_letters=remove_repeated_letters)
 					self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 					self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
+					self.command_or_bot_index.append(-1)
+
+				i += 1
 
 		self._adjust_time(times)
 		comments.close()
@@ -164,53 +171,51 @@ class TwitchChatParser:
 		else:
 			print(terms_max[:])
 
-	def set_content(self, spam_threshold=6):
+	def set_content(self, keywords):
 		for i in range(len(self.logfile_info['token_lists'])):
-			content = self._get_content(self.logfile_info['token_lists'][i][0], i, spam_threshold)
+			content = self._get_content(self.logfile_info['token_lists'][i][0], i, keywords)
 			self.logfile_info['token_lists'][i].append(content)
 		print("[*] content setting finished !")
 
-	# 1:Sub only, 2: Normal conversation(no sub), 3: Question, 4: Spam,  5: emote only
-	def _get_content(self, tokens, index, spam_threshold):
-		if '%' in self.logfile_info['users_list'][index]: # Subscribers
+	# 1:Sub only, 2: Emote only, 3: Bot and Command, 4: Question, 5: Normal conversation(no sub) 6. Keywords
+	def _get_content(self, tokens, i, keywords):
+		if '%' in self.logfile_info['users_list'][i]: # Subscribers
 			return '1'
 
+		# Bot and Command 
+		if self.command_or_bot_index[i] >= 0:
+			return '3'
+
 		if len(tokens) > 0:
+			# keywords
+			for token in tokens:
+				if token in keywords:
+					return '6'
+
 			emo_only = 1
-			no_emo_tokens = []
+			not_emo_tokens = []
 			for token in tokens:
 				if token[-1] != 'EMOTICON':
-					no_emo_tokens = token[0]
+					not_emo_tokens = token[0]
 					emo_only = 0 
 			
 			if emo_only == 1:
-				return '5'
+				return '2'
 		
 			# Check Spam (not count emotes)
-			spam_check = defaultdict(int)
-			for t in no_emo_tokens:
-				spam_check[t] += 1
+			# spam_check = defaultdict(int)
+			# for t in not_emo_tokens:
+			# 	spam_check[t] += 1
 
-			for key in spam_check.keys():
-				if spam_check[key] >= spam_threshold:
-					return '4'
-			
+			# for key in spam_check.keys():
+			# 	if spam_check[key] >= spam_threshold:
+			# 		return '3'
+
 			# [NEED TO FIX]
 			if '?' in tokens:
-				return '3'
+				return '4'
 
-		return '2'
-
-	def _update_emotes(self, emote_dir): 
-		# store "lower-case" emotion and its emo-score
-		i = 0
-		for fn in os.listdir(emote_dir):
-			with open(os.path.join(emote_dir, fn), 'r') as f:
-				emo = line[:-1].split(',')
-				if emo[0] in self.streamer_emotes:
-					self.emotes.append([emo[0].lower(), '1'])
-				else:
-					self.emotes.append([emo[0].lower(), emo[1]])
+		return '5'
 
 	def _check_sentiment(self, emote):
 		for e in self.pos_emo:
@@ -281,53 +286,59 @@ class TwitchChatParser:
 				self.logfile_info['token_lists'][i].append(score)
 			else:
 				self.logfile_info['token_lists'][i].append(0)
-		print("[*] sentiment analysis setting finished !")
+		print("[*] sentiment analysis setting finished !") 
 
 	def save_parsed_log(self, save_f, no_emotes=False, filter_1=False):
-		# Save the cleaned log (filter out 'URL', repeapted letters, punctuations)
-		# Save file to ../{streamer}/cleaned_logs_dir/cleaned_{streamer}.txt
+		# The saved cleaned log will be the data corpus of BTM 
+		# I filter out the token contains "URL", "repeapted letters", "punctuations", "NUMBER", "EMOTICON"
 		with open(save_f, 'w') as f:
 			for i in range(len(self.logfile_info['token_lists'])):
 				if len(self.logfile_info['token_lists'][i][0]) > 0:
 					line = ''
 					for token in self.logfile_info['token_lists'][i][0]:
+						# token form: (token, lemmatized token, [POS, …], property)
 						if token[0] != '?':
 							if filter_1:
 								if self.logfile_info['count_tokens'][token[0]] > 1:
 									if no_emotes:
-										if token[-1] not in ('URL', 'EMOTICON'):
+										if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
 											line += ' ' + token[0]
 									else:
-										if token[-1] != 'URL':
+										if token[-1] not in ('URL', 'NUMBER', '1'):
 											line += ' ' + token[0]
 							else:
 								if no_emotes:
-									if token[-1] not in ('URL', 'EMOTICON'):
+									if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
 										line += ' ' + token[0]
 								else:
-									if token[-1] != 'URL':
+									if token[-1] not in ('URL', 'NUMBER', '1'):
 										line += ' ' + token[0]
 					line = line.strip()
 					
 					if len(line) > 0:
-						self.logfile_info['token_lists'][i].append('Kept')
+						# self.logfile_info['token_lists'][i].append('Kept')
+						self.kept_index.append(i)
 						f.write(line+'\n')
 					else:
-						self.logfile_info['token_lists'][i].append('Notkept')
-				else:
-					self.logfile_info['token_lists'][i].append('Notkept')
+						# self.logfile_info['token_lists'][i].append('Notkept')
+						self.kept_index.append(-1)
+				else: # Empty token
+					# self.logfile_info['token_lists'][i].append('Notkept')
+					self.kept_index.append(-1)
 
 		print("[*] Save the parsed logs to %s" % save_f)
 	
 	def set_topics(self, topics, num_topics):
-		
 		k = 0
 		for i in range(len(self.logfile_info['token_lists'])):
-			if 'Kept' in self.logfile_info['token_lists'][i]: 	# topic: 1 ~ num_topics
+			# if 'Kept' in self.logfile_info['token_lists'][i]: 	# topic: 1 ~ num_topics
+			if self.kept_index[i] != -1:
 				self.logfile_info['token_lists'][i].append(str(topics[k]))
 				k += 1
-			else:	# topic: num_topics + 1 (for other topics that are not being analyzed)
+			elif self.logfile_info['token_lists'][i][1] == '2': # emote only 
 				self.logfile_info['token_lists'][i].append(str(int(num_topics)+1))
+			else:	# topic: num_topics + 1 (for other topics that are not being analyzed) aka 
+				self.logfile_info['token_lists'][i].append('')
 
 		print("[*] topics setting finished !")
 
@@ -368,9 +379,9 @@ class TwitchChatParser:
 			for i in range(len(self.logfile_info['token_lists'])):
 				time = '%.5f' % self.logfile_info['time'][i]
 				writer.writerow({'time': time,
-								 'topic': self.logfile_info['token_lists'][i][4],
-								 'related': self.logfile_info['token_lists'][i][5],
-								 'emotion': str(self.logfile_info['token_lists'][i][3]),
+								 'topic': self.logfile_info['token_lists'][i][3],
+								 'related': self.logfile_info['token_lists'][i][4],
+								 'emotion': str(self.logfile_info['token_lists'][i][2]),
 								 'content': self.logfile_info['token_lists'][i][1],
 								 'comment': self.logfile_info['utterances'][i]
 								 })

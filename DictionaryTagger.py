@@ -46,7 +46,7 @@ class DictionaryTagger(object):
 			while (j > i):
 				expression_form = ' '.join([token[0] for token in tokens[i:j]]).lower()
 				expression_lemma = ' '.join([token[1] for token in tokens[i:j]]).lower()
-				prop = ' '.join([token[3] for token in tokens[i:j]])
+				prop = ' '.join([token[3] for token in tokens[i:j]]) # properties
 				if tag_with_lemmas:
 					literal = expression_lemma
 				else:

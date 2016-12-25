@@ -5,8 +5,8 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from stop_words import get_stop_words
 
-tokenizer = RegexpTokenizer(r'\w+')
-identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+# tokenizer = RegexpTokenizer(r'\w+')
+# identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 emoticons_str = r"""
 				(?:
@@ -20,6 +20,7 @@ regex_str = [
 	r'<3',	# heart
 	r'\?',	# Question mark
 	r'(?:@[\w_]+)', # @-mentions
+	r'(?:![\w_]+)', # @-mentions
 	r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)", # hash-tags
 	r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
 	r"(?:[a-z][a-z'\-_]+[a-z])", # words with - and '
@@ -72,7 +73,7 @@ class Preprocessor:
 		tokens = self.sentence_to_tokens(sentence)
 
 		if lowercase:
-			tokens = [token if self.emoticon_re.search(token) else token.lower() for token in tokens]
+			tokens = [token if (self.emoticon_re.search(token) or token in self.emotes) else token.lower() for token in tokens]
 
 		if remove_stops:
 			tokens = [token for token in tokens if token not in self.stops]
@@ -80,7 +81,7 @@ class Preprocessor:
 		tokens_p = self.placeholder(tokens)
 
 		if remove_repeated_letters:
-			tokens_p = [(re.sub(r'(.)\1+', r'\1', token), p) if p not in ('URL', 'HASHTAG', 'EMOTICON') else (token, p) for (token, p) in tokens_p]
+			tokens_p = [(re.sub(r'(.)\1+', r'\1', token), p) if p not in ('URL', 'HASHTAG', 'EMOTICON', 'NUMBER') else (token, p) for (token, p) in tokens_p]
 
 		if remove_punc:
 			tokens_p = [(token, p) for (token, p) in tokens_p if token not in self.puncs]
@@ -100,6 +101,10 @@ class Preprocessor:
 				tokens_p.append((token, "URL"))
 			elif self.emoticon_re.search(token):
 				tokens_p.append((token, "EMOTICON"))
+			elif token.isdigit():
+				tokens_p.append((token, "NUMBER"))
+			elif len(token) == 1:
+				tokens_p.append((token, "1"))
 			else:
 				tokens_p.append((token, "NORMAL"))
 

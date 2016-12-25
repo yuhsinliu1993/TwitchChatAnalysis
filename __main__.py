@@ -6,6 +6,7 @@ def _get_kwargs():
 	parser.add_argument("-c", "--clean", action='store_true', help="clean the unuseful data")
 	parser.add_argument("-n", "--num-topics", type=int, help="Specify the num of topics for LDA modeling")
 	parser.add_argument("-f", "--file", type=str, help="Indicate log file location")
+	parser.add_argument("-e", "--emote", action='store_true', help="emotes join topic modeling")
 	return vars(parser.parse_args())
 
 def main(**kwargs):
@@ -42,7 +43,8 @@ def main(**kwargs):
 	else:
 		data = text_parser.load_log_from_dir(log_dir)
 	text_parser.parsing(data, output_dir, remove_repeated_letters=True)
-	text_parser.set_content(spam_threshold=_local['spam_threshold'])
+	text_parser.set_content(_local['keywords'])
+	# text_parser.set_content(spam_threshold=_local['spam_threshold'])
 	
 	# [??] Filter out the token which appears only one time
 	text_parser.save_parsed_log(saved_log_path, no_emotes=True, filter_1=True)

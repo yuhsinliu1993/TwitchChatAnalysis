@@ -1,9 +1,10 @@
-streamer:
+spam_threshold: 3
 
-playing: 
-
-log_dir: 
-
-num_topics: 
+relation_threshold: 0.01
 
 keywords:
+  - shirt 
+  - deck
+  - wutface
+  - sub
+  - sound 

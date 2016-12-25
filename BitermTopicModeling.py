@@ -96,6 +96,8 @@ class BTM:
 			for key, val in self.topics_dict.items():
 			    topics = ' '.join([t_p.rsplit(':', 1)[0] for t_p in val[1].split() if float(t_p.rsplit(':', 1)[-1]) >= threshold])
 			    wf.write(topics+'\r\n')
+			wf.write('emotes\r\n') # The last topic is "emote only"
+
 
 
 class BBTM:
