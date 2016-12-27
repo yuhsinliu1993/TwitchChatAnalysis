@@ -23,19 +23,19 @@ optional arguments:
 
 fields: time, topic, relation, emotion, content, comment
 
-topic:
+###topic###
    Inferred from Biterm Topic Model(BTM)
 
-relation:
+###relation###
    - 1: relaterd
    - 2: unrelated
 
-emotion:
+###emotion###
    - <0: negative comment
    - =0: neutral comment
    - >0: positive commnet
 
-content type:
+###content type###
    - 1: Subscriber only
    - 2: Emote only
    - 3: Bot and Command
