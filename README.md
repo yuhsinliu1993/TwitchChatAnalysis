@@ -20,11 +20,22 @@ optional arguments:
   -e     emotes join topic modeling
 ```
 ## Result: analysis.csv ##
-In streamer/output directory
 
-time, topic, related, emotion, content, comment
+fields: time, topic, relation, emotion, content, comment
 
-content type:
+###topic###
+   - Inferred from Biterm Topic Model(BTM)
+
+###relation###
+   - 1: relaterd
+   - 2: unrelated
+
+###emotion###
+   - <0: negative comment
+   - =0: neutral comment
+   - >0: positive commnet
+
+###content type###
    - 1: Subscriber only
    - 2: Emote only
    - 3: Bot and Command
