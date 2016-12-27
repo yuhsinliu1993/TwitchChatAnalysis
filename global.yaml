@@ -10,6 +10,6 @@ emotefilesDir:
 sentimentfilesDir:
   /Users/Michaeliu/Twitch/Sentimentfiles
 
-spam_threshold: 5
+# spam_threshold: 5
 
 relation_threshold: 0.01

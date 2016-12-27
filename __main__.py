@@ -57,7 +57,7 @@ def main(**kwargs):
 
 	
 	# ==== biterm topic modeling ====
-	call(['bash', 'run.sh', str(kwargs['num_topics']), streamer])
+	call(['bash', './BTM/run.sh', str(kwargs['num_topics']), streamer])
 
 	topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
 	text_parser.set_topics(topics, kwargs['num_topics']) 
