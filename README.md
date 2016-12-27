@@ -24,7 +24,7 @@ optional arguments:
 fields: time, topic, relation, emotion, content, comment
 
 ###topic###
-   Inferred from Biterm Topic Model(BTM)
+   - Inferred from Biterm Topic Model(BTM)
 
 ###relation###
    - 1: relaterd
