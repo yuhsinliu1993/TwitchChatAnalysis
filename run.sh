@@ -16,13 +16,13 @@ echo ""
 echo "=============== Topic Learning ============="
 W=`wc -l < $voca_pt` # vocabulary size
 echo "run ./BTM/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir"
-./src/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir
+./BTM/btm est $K $W $alpha $beta $niter $save_step $dwid_pt $model_dir
 
 
 # infer p(z|d) for each doc
 echo ""
 echo "================ Infer P(z|d)==============="
 echo "run ./BTM/btm inf sum_b $K $dwid_pt $model_dir"
-./BTM/src/btm inf sum_b $K $dwid_pt $model_dir
+./BTM/btm inf sum_b $K $dwid_pt $model_dir
 
 

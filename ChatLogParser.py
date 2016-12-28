@@ -9,8 +9,8 @@ from DictionaryTagger import DictionaryTagger
 
 class TwitchChatParser:
 
-	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'kappa', 'GoldenKappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo"]
-	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage"]
+	pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'kappa', 'GoldenKappa', ":)", ":o", "B)", ";)", ";p", ":p", ":>", "<]", ":D", "<3", "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo", "LUL", "LOL"]
+	neg_emo = [">(", ":(", ":\\", ":z", 'WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage", "WTF", 'rekt']
 	robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
 
 	def __init__(self, streamer):
@@ -27,7 +27,7 @@ class TwitchChatParser:
 		self.logfile_info['users_list'] = []
 		self.logfile_info['time'] = []
 		self.logfile_info['count_tokens'] = Counter()
-		self.emotes = self.__fetch_emotes('TwitchEmotesPics')
+		self.emotes = self.__fetch_emotes('TwitchEmotesPics') # No lowercase
 		self.kept_index = []
 		self.command_or_bot_index = []
 
@@ -228,7 +228,7 @@ class TwitchChatParser:
 
 	def __fetch_emotes(self, path):
 		emotes = []
-		emotelist = [':)',':(',':o',':z','B)',':/',';)',';p',':p',';P',':P','R)','o_O','O_O','o_o','O_o',':D','>(','<3']
+		emotelist = [':)',':(',':o',':z','B)',':/',';)',';p',':p',';P',':P','R)','o_O','O_O','o_o','O_o',':D','>(','<3', 'lul', 'lol', 'imao', 'rekt']
 		# response = urlopen('https://api.twitch.tv/kraken/chat/emoticon_images')
 		# data = response.read().decode("utf-8")
 		# data = json.loads(data)

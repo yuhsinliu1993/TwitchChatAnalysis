@@ -78,13 +78,13 @@ class Preprocessor:
 		if remove_stops:
 			tokens = [token for token in tokens if token not in self.stops]
 
+		if remove_punc:
+			tokens_p = [(token, p) for (token, p) in tokens_p if token not in self.puncs]
+
 		tokens_p = self.placeholder(tokens)
 
 		if remove_repeated_letters:
 			tokens_p = [(re.sub(r'(.)\1+', r'\1', token), p) if p not in ('URL', 'HASHTAG', 'EMOTICON', 'NUMBER') else (token, p) for (token, p) in tokens_p]
-
-		if remove_punc:
-			tokens_p = [(token, p) for (token, p) in tokens_p if token not in self.puncs]
 
 		return tokens_p
 
@@ -93,7 +93,7 @@ class Preprocessor:
 		tokens_p = []
 		
 		for token in tokens:
-			if token in self.emotes:
+			if token.lower() in [e.lower() for e in self.emotes]:
 				tokens_p.append((token, "EMOTICON"))
 			elif token.startswith('#'):
 				tokens_p.append((token, "HASHTAG"))
@@ -126,6 +126,7 @@ class Preprocessor:
 				   ('<3', '<3', ['NNS'], 'EMOTICON'),
 				   ('#godnight', '#godnight', ['VBD'], 'HASHTAG')]
 		"""
+		
 		pos = pos_tag([token for (token, p) in tokens_p])
 		lmtzr = WordNetLemmatizer()
 
