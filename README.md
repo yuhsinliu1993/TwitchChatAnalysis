@@ -7,7 +7,7 @@
       
 ## Usage ##
 ```python
-usage: . [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
+usage: . [-h] [-c] [-n NUM_TOPICS] [-f LOGFILE] [-e] streamer
 
 positional arguments:
   streamer     Specify a streamer's twitch name
@@ -44,3 +44,4 @@ fields: time, topic, relation, emotion, content, comment
    - 6: Self-defined keywords
 
 ## Topin ##
+![ToPIN](http://i.makeagif.com/media/12-29-2016/KQzS5t.gif)
