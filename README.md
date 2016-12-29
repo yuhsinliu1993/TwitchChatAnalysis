@@ -7,7 +7,7 @@
       
 ## Usage ##
 ```python
-usage: . [-h] [-c] [-n NUM_TOPICS] [-f LOGFILE] [-e] streamer
+usage: python . [-h] [-c] [-n NUM_TOPICS] [-f LOGFILE] [-e] streamer
 
 positional arguments:
   streamer     Specify a streamer's twitch name
