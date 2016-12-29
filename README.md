@@ -42,6 +42,4 @@ fields: time, topic, relation, emotion, content, comment
    - 4: Question
    - 5: Normal conversation (without subs)
    - 6: Self-defined keywords
-
-## Topin ##
-![ToPIN](http://i.makeagif.com/media/12-29-2016/KQzS5t.gif)
+   
