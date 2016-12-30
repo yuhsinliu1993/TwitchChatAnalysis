@@ -47,7 +47,7 @@ def main(**kwargs):
 	# text_parser.set_content(spam_threshold=_local['spam_threshold'])
 	
 	# [??] Filter out the token which appears only one time
-	text_parser.save_parsed_log(saved_log_path, no_emotes=True, filter_1=True)
+	text_parser.save_parsed_log(saved_log_path, filter_1=True)
 	text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
 	text_parser.sentiment_analysis()
 	

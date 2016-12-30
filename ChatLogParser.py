@@ -29,7 +29,8 @@ class TwitchChatParser:
 		self.logfile_info['count_tokens'] = Counter()
 		self.emotes = self.__fetch_emotes('TwitchEmotesPics') # No lowercase
 		self.kept_index = []
-		self.command_or_bot_index = []
+		self.command_bot_index = [] # i-th is the command or bot utterance
+		self.only_emote_index = []
 
 		self.streamer = streamer
 		try:
@@ -107,15 +108,27 @@ class TwitchChatParser:
 				# Filter out 'Command' => treat 'command' as empty token list
 				if match.group(7).startswith('!') or '^' in match.group(4):
 					self.logfile_info['token_lists'].append([[]])
-					self.command_or_bot_index.append(i)
+					self.command_bot_index.append(i)
+					self.only_emote_index.append(-1)
 				# elif: # Bot's reply 
 				# 	self.logfile_info['token_lists'].append([[]])
 				else:
+					# tokenization return a list of tokens with its property 
+					# ex: [('WutFace', 'EMOTICON'), ('music', 'NORMAL'), ('WutFace', 'EMOTICON')] 
 					tokens_p = self.preprocess.tokenization(match.group(7), remove_repeated_letters=remove_repeated_letters)
 					self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
 					self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
-					self.command_or_bot_index.append(-1)
+					self.command_bot_index.append(-1)
 
+					# [TEST FEATURE] mark those who only contain 'EMOTICON'
+					c = 0
+					for (token, p) in tokens_p:
+						if p == 'EMOTICON':
+							c += 1
+					if c == len(tokens_p):
+						self.only_emote_index.append(i)
+					else:
+						self.only_emote_index.append(-1)
 				i += 1
 
 		self._adjust_time(times)
@@ -183,24 +196,17 @@ class TwitchChatParser:
 			return '1'
 
 		# Bot and Command 
-		if self.command_or_bot_index[i] >= 0:
+		if self.command_bot_index[i] >= 0:
 			return '3'
+
+		if self.only_emote_index[i] >= 0:
+			return '2'
 
 		if len(tokens) > 0:
 			# keywords
 			for token in tokens:
 				if token in keywords:
 					return '6'
-
-			emo_only = 1
-			not_emo_tokens = []
-			for token in tokens:
-				if token[-1] != 'EMOTICON':
-					not_emo_tokens = token[0]
-					emo_only = 0 
-			
-			if emo_only == 1:
-				return '2'
 		
 			# Check Spam (not count emotes)
 			# spam_check = defaultdict(int)
@@ -288,42 +294,46 @@ class TwitchChatParser:
 				self.logfile_info['token_lists'][i].append(0)
 		print("[*] sentiment analysis setting finished !") 
 
-	def save_parsed_log(self, save_f, no_emotes=False, filter_1=False):
+	def save_parsed_log(self, save_f, filter_1=False):
 		# The saved cleaned log will be the data corpus of BTM 
-		# I filter out the token contains "URL", "repeapted letters", "punctuations", "NUMBER", "EMOTICON"
+		# Filter out the token contains "URL", "repeapted letters", "punctuations", "NUMBER"
+		# Filter out EMOTICON token in the emote_only utterance"
 		with open(save_f, 'w') as f:
 			for i in range(len(self.logfile_info['token_lists'])):
-				if len(self.logfile_info['token_lists'][i][0]) > 0:
-					line = ''
-					for token in self.logfile_info['token_lists'][i][0]:
-						# token form: (token, lemmatized token, [POS, …], property)
-						if token[0] != '?':
-							if filter_1:
-								if self.logfile_info['count_tokens'][token[0]] > 1:
-									if no_emotes:
-										if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
-											line += ' ' + token[0]
-									else:
+				if self.only_emote_index[i] == -1:
+					if len(self.logfile_info['token_lists'][i][0]) > 0:
+						line = ''
+						for token in self.logfile_info['token_lists'][i][0]:
+							# token form: (token, lemmatized token, [POS, …], property)
+							if token[0] != '?':
+								if filter_1:
+									if self.logfile_info['count_tokens'][token[0]] > 1:
+										# if no_emotes:
+										# 	if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
+										# 		line += ' ' + token[0]
+										# else:
 										if token[-1] not in ('URL', 'NUMBER', '1'):
 											line += ' ' + token[0]
-							else:
-								if no_emotes:
-									if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
-										line += ' ' + token[0]
 								else:
+									# if no_emotes:
+									# 	if token[-1] not in ('URL', 'NUMBER', 'EMOTICON', '1'):
+									# 		line += ' ' + token[0]
+									# else:
 									if token[-1] not in ('URL', 'NUMBER', '1'):
 										line += ' ' + token[0]
-					line = line.strip()
-					
-					if len(line) > 0:
-						# self.logfile_info['token_lists'][i].append('Kept')
-						self.kept_index.append(i)
-						f.write(line+'\n')
-					else:
+						line = line.strip()
+						
+						if len(line) > 0:
+							# self.logfile_info['token_lists'][i].append('Kept')
+							self.kept_index.append(i)
+							f.write(line+'\n')
+						else:
+							# self.logfile_info['token_lists'][i].append('Notkept')
+							self.kept_index.append(-1)
+					else: # Empty token
 						# self.logfile_info['token_lists'][i].append('Notkept')
 						self.kept_index.append(-1)
-				else: # Empty token
-					# self.logfile_info['token_lists'][i].append('Notkept')
+				else:
 					self.kept_index.append(-1)
 
 		print("[*] Save the parsed logs to %s" % save_f)
@@ -335,7 +345,7 @@ class TwitchChatParser:
 			if self.kept_index[i] != -1:
 				self.logfile_info['token_lists'][i].append(str(topics[k]))
 				k += 1
-			elif self.logfile_info['token_lists'][i][1] == '2': # emote only 
+			elif self.only_emote_index[i] >= 0: # emote only 
 				self.logfile_info['token_lists'][i].append(str(int(num_topics)+1))
 			else:	# topic: num_topics + 1 (for other topics that are not being analyzed) aka 
 				self.logfile_info['token_lists'][i].append('')
