@@ -1,0 +1,9 @@
+spam_threshold: 4
+
+relation_threshold: 0.01
+
+keywords:
+  - homeless
+  - curtain
+  
+  
