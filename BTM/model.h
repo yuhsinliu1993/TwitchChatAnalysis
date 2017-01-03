@@ -42,13 +42,13 @@ class Model {
   public:
     Model(int K, int W, double a, double b, int n_iter, int save_step,
   		bool has_b = false): 
-  	K(K), W(W), alpha(a), beta(b), 
-  	n_iter(n_iter), has_background(has_b),
-  	save_step(save_step) {
-  	pw_b.resize(W);
-  	nwz.resize(K, W);
-  	nb_z.resize(K);
-    }
+    	K(K), W(W), alpha(a), beta(b), 
+    	n_iter(n_iter), has_background(has_b),
+    	save_step(save_step){
+      	pw_b.resize(W);
+      	nwz.resize(K, W);
+      	nb_z.resize(K);
+      }
     
     // run estimate procedures
     void run(string docs_pt, string res_dir);

@@ -68,7 +68,7 @@ def main(**kwargs):
 	# ==== Get Parameters ====
 	print('\n============ Paramerters ============')
 	print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
-	print('TOPIC_NUM: %d' % kwargs['num_topics'])
+	print('TOPIC_NUM: %d' % kwargs['num_topics']+1)
 	# VIDEO_LENGTH = 
 
 	if kwargs['clean']:
