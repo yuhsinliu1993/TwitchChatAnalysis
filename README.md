@@ -1,4 +1,4 @@
-#Twitch Chatting Log Analysis
+# Twitch Chatting Log Analysis
 
 - Required python package
    - nltk
@@ -31,9 +31,7 @@ fields: time, topic, relation, emotion, content, comment
    - 2: unrelated
 
 ### emotion ###
-   - <0: negative comment
-   - =0: neutral comment
-   - >0: positive commnet
+
 
 ### content type ###
    - 1: Subscriber only
