@@ -4,7 +4,7 @@
    - nltk
    - gensim
    - stop_words
-      
+
 ## Usage ##
 ```python
 usage: python . [-h] [-c] [-n NUM_TOPICS] [-f LOGFILE] [-e] streamer
@@ -23,23 +23,23 @@ optional arguments:
 
 fields: time, topic, relation, emotion, content, comment
 
-###topic###
+### topic ###
    - Adopted Biterm Topic Modeling
 
-###relation###
+### relation ###
    - 1: relaterd
    - 2: unrelated
 
-###emotion###
+### emotion ###
    - <0: negative comment
    - =0: neutral comment
    - >0: positive commnet
 
-###content type###
+### content type ###
    - 1: Subscriber only
    - 2: Emote only
    - 3: Bot and Command
    - 4: Question
    - 5: Normal conversation (without subs)
    - 6: Self-defined keywords
-   
+
