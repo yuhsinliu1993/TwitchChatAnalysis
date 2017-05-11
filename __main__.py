@@ -1,6 +1,7 @@
 import argparse
 import os
 import yaml
+from utils import *
 
 
 def _get_kwargs():
@@ -40,40 +41,51 @@ def main(**kwargs):
 
     call(['mkdir', '-p', streamerDir + '/output/model'])
 
-    # ==== Starting Parse the log =====
-    text_parser = TwitchChatParser(streamer=streamer)
+    # ==== Looding Data ====
+    # [TODO]: loading data with np array and convert it into word2vec
     if 'file' in kwargs:
-        data = text_parser.load_logfile(kwargs['file'])
+        data = load_logfile(kwargs['file'])
     else:
-        data = text_parser.load_log_from_dir(log_dir)
+        data = load_logfiles_from_dir(log_dir)
+
+    # ==== Starting Parse the log ====
+    text_parser = TwitchChatParser(streamer=streamer)
     text_parser.parsing(data, output_dir, remove_repeated_letters=True)
     text_parser.set_content(_local['keywords'])
     # text_parser.set_content(spam_threshold=_local['spam_threshold'])
-
-    # [??] Filter out the token which appears only one time
     text_parser.save_parsed_log(saved_log_path, filter_1=True)
-    text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
-    text_parser.sentiment_analysis()
 
-    # ==== Bursty Biterm Topic Modeling ====
-    biterm = BTM(num_topics=kwargs['num_topics'])
-    biterm.FileIndeXing(saved_log_path, output_dir)  # doc_wids.txt, vocabulary.txt
+    # ==== Build Dataset for deep learning ====
+    words_list = dataset_to_words_list(text_parser.logfile_info['cleaned_utterances'])
+    data, count, dictionary, reverse_dictionary = build_dataset(words_list)
 
-    # ==== biterm topic modeling ====
-    call(['bash', './run.sh', str(kwargs['num_topics']), streamer])
+    # [EXP] Filter out the token which appears only one time
 
-    topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
-    text_parser.set_topics(topics, kwargs['num_topics'])
-    text_parser.set_relation(threshold=_local['relation_threshold'])
-    text_parser.save_analysis(output_dir)
+    # text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
+    # text_parser.sentiment_analysis()
 
-    # ==== Get Parameters ====
-    print('\n============ Paramerters ============')
-    print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
-    print('TOPIC_NUM: %d' % kwargs['num_topics'])
+    # """
+    # [TODO] Using deep learning to do clustering the data
+    # """
+    # # ==== Bursty Biterm Topic Modeling ====
+    # biterm = BTM(num_topics=kwargs['num_topics'])
+    # biterm.FileIndeXing(saved_log_path, output_dir)  # doc_wids.txt, vocabulary.txt
 
-    if kwargs['clean']:
-        call(['rm', streamerDir + '/output/doc_wids.txt'])
+    # # ==== biterm topic modeling ====
+    # call(['bash', './run.sh', str(kwargs['num_topics']), streamer])
+
+    # topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
+    # text_parser.set_topics(topics, kwargs['num_topics'])
+    # text_parser.set_relation(threshold=_local['relation_threshold'])
+    # text_parser.save_analysis(output_dir)
+
+    # # ==== Get Parameters ====
+    # print('\n============ Paramerters ============')
+    # print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
+    # print('TOPIC_NUM: %d' % kwargs['num_topics'])
+
+    # if kwargs['clean']:
+    #     call(['rm', streamerDir + '/output/doc_wids.txt'])
 
 
 if __name__ == '__main__':

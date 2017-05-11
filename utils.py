@@ -2,12 +2,16 @@ import os
 import re
 import json
 import operator
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from urllib2 import urlopen
 from collections import defaultdict, Counter
 
-pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'kappa', 'GoldenKappa', "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo", "LUL", "LOL"]
+
+wh_lists = ['why', 'how', 'where', 'when', 'what', 'which']
+
+pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'KappaPride', 'GoldenKappa', "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo", "LUL", "LOL"]
 
 neg_emo = ['WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage", "WTF", 'rekt']
 
@@ -41,6 +45,10 @@ def load_logfile(file_path):
             word_lists.append(tf.compat.as_str(f).split())
 
     return word_lists
+
+
+def load_local_info():
+    pass
 
 
 def text_to_wordlist(text, remove_stopwords=False, stem_words=False):
@@ -117,8 +125,8 @@ def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
     text = re.sub(r":\(", " unhappy ", text)
     text = re.sub(r":\\", " unhappy ", text)
     text = re.sub(r":z", " unhappy ", text)
+    # text = re.sub(r"@(\w+)", " ", text)
     text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
-    text = re.sub(r"@(\w+)", " ", text)
     text = re.sub(r"what's", "what is ", text)
     text = re.sub(r"wasnt", "was not", text)
     text = re.sub(r"werent", "were not", text)
@@ -147,11 +155,13 @@ def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
     text = re.sub(r" 9\/11 ", "911", text)
     text = re.sub(r"\s{2,}", " ", text)
     text = re.sub(r"feels(\w+)man", "feels \g<1> man", text)
+    text = re.sub(r"feel(\w+)man", "feels \g<1> man", text)
     text = re.sub(r"f(u)+ck", "fuck", text)
     text = re.sub(r"l(o)+l", "lol", text)
     text = re.sub(r"l(u)+l", "lul", text)
     text = re.sub(r"^u ", " you ", text)
     text = re.sub(r" u ", " you ", text)
+    text = re.sub(r" (\w)*kappa(\w)* ", " kappa ", text)
 
     # Optionally, shorten words to their stems
     if stem_words:
@@ -201,6 +211,9 @@ def fetch_twitch_emotes(twitch_emote_dir=None):
         emotes.append(os.path.splitext(fn)[0].lower())
 
     return emotes
+
+
+# emotes = fetch_twitch_emotes(twitch_emote_dir='TwitchEmotesPics')
 
 
 def get_streamer_emote(streamer=None):
@@ -275,7 +288,7 @@ def most_common_cooccurrent_terms(co_matrix=None, n=5):
         print(terms_max[:])
 
 
-def _tag_pos_comment(comment):
+def _tag_pos_sentence(sentence):
     words = comment.split()
     for w in words:
         if w in [p.lower() for p in pos_emo]:
@@ -284,7 +297,7 @@ def _tag_pos_comment(comment):
     return False
 
 
-def _tag_neg_comment(comment):
+def _tag_neg_sentence(sentence):
     words = comment.split()
     for w in words:
         if w in [p.lower() for p in neg_emo]:
@@ -293,11 +306,12 @@ def _tag_neg_comment(comment):
     return False
 
 
-def handed_sentiment_tagging(comment):
-    if _tag_pos_comment(comment):
+def handed_sentiment_tagging(sentence):
+
+    if _tag_pos_sentence(sentence):
         return 1
-    elif _tag_neg_comment(comment):
-        return 0
+    elif _tag_neg_sentence(sentence):
+        return -1
     else:
         return ""
 
@@ -312,17 +326,39 @@ def _sentence_only_emotes(sentence, emotes):
     return True
 
 
-def sentence_(sentence):
-    pass
+def _sentence_keyword(sentence, keywords):
+    words = sentence.split()
+
+    for w in words:
+        if w in keywords:
+            return True
+
+    return False
 
 
-def handed_category_tagging(sentence, emotes):
+def _sentence_questin(sentence):
+    words = sentence.split()
+
+    for w in words:
+        if w in wh_lists:
+            return True
+
+    return False
+
+
+def handed_category_tagging(sentence, emotes, keywords, streamer):
     """
     RETURN:
-        1: EMOTES ONLY
+        1: EMOTEs ONLY
         2: ABOUT THIJS
-        3: QUESTIONS
-        4: MEME
+        3: NORMAL CONVERSATIONs
+        4: QUESTIONs
     """
     if _sentence_only_emotes(sentence, emotes):
         return 1
+    elif _sentence_keyword(sentence, keywords):
+        return 2
+    elif _sentence_questin(sentence):
+        return 4
+    else:
+        return ""

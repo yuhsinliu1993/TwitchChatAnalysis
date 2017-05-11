@@ -2,7 +2,6 @@ import re
 import os
 import csv
 import operator
-import tensorflow as tf
 from Preprocess import Preprocessor
 from collections import defaultdict, Counter
 from SentimentAnalysis import SentimentAnalyzer
@@ -70,14 +69,24 @@ class TwitchChatParser:
                 curr = times[i]
                 count = 0
 
-    # Get `logfile_info`:  utterances, user_lists, time
-    def parsing(self, data, out_dir, remove_repeated_letters=False):
+    def parsing(self, data, out_dir, remove_repeated_letters=False, no_bots=True):
+        """
+        Parsing the input data and store into `logfile_info` which contains
+            `users_list`
+            `utterances`
+            `cleaned_utterances`
+            `token_lists`
+            `count_tokens`
+            `time`
+
+        Also, store the comments, cleaned_comment, usernames to txt files
+        """
         set_ref_time = 0
         comments = open(os.path.join(out_dir, 'comments.txt'), 'w')
         cleaned_comments = open(os.path.join(out_dir, 'cleaned_comments.txt'), 'w')
         cleaned_comments.write('comments\r\n')
         usernames = open(os.path.join(out_dir, 'usernames.txt'), 'w')
-        times = []  # ?????
+        times = []
         i = 0
 
         for line in data:
@@ -93,28 +102,46 @@ class TwitchChatParser:
                 # self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
                 times.append(int(match.group(1)) * 3600 + int(match.group(2)) * 60 + int(match.group(3)) - self.logfile_info['ref_time'])
 
-                self.logfile_info['utterances'].append(match.group(7).strip())
                 cleaned = get_cleaned_text(match.group(7))
+
+                self.logfile_info['utterances'].append(match.group(7).strip())
                 self.logfile_info['cleaned_utterances'].append(cleaned.strip())
 
-                comments.write(match.group(7).strip() + '\r\n')
-                cleaned_comments.write(cleaned.strip() + '\r\n')
-                usernames.write(match.group(4) + '\r\n')
+                if no_bots:
+                    if (match.group(7).startswith('!')) or ('^' in match.group(4)):  # command or bot's reply
+                        self.logfile_info['token_lists'].append([[]])
+                        self.command_bot_index.append(i)
+                        self.only_emote_index.append(-1)
+                    else:
+                        # tokenization return a list of tokens with its property
+                        # ex: [('WutFace', 'EMOTICON'), ('music', 'NORMAL'), ('WutFace', 'EMOTICON')]
+                        tokens_p = self.preprocess.tokenization(cleaned, remove_repeated_letters=remove_repeated_letters)
+                        self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
+                        self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
+                        self.command_bot_index.append(-1)
 
-                # Filter out 'Command' => treat 'command' as empty token list
-                if match.group(7).startswith('!') or '^' in match.group(4):
-                    self.logfile_info['token_lists'].append([[]])
-                    self.command_bot_index.append(i)
-                    self.only_emote_index.append(-1)
-                # elif: # Bot's reply
-                #   self.logfile_info['token_lists'].append([[]])
+                        comments.write(match.group(7).strip() + '\r\n')
+                        cleaned_comments.write(cleaned.strip() + '\r\n')
+                        usernames.write(match.group(4) + '\r\n')
+
+                        # [TEST FEATURE] mark those who only contain 'EMOTICON'
+                        c = 0
+                        for (token, p) in tokens_p:
+                            if p == 'EMOTICON':
+                                c += 1
+                        if c == len(tokens_p):
+                            self.only_emote_index.append(i)
+                        else:
+                            self.only_emote_index.append(-1)
                 else:
-                    # tokenization return a list of tokens with its property
-                    # ex: [('WutFace', 'EMOTICON'), ('music', 'NORMAL'), ('WutFace', 'EMOTICON')]
                     tokens_p = self.preprocess.tokenization(match.group(7), remove_repeated_letters=remove_repeated_letters)
                     self.logfile_info['token_lists'].append([self.preprocess.tag_and_lemma(tokens_p)])
                     self.logfile_info['count_tokens'].update([token for (token, p) in tokens_p])
                     self.command_bot_index.append(-1)
+
+                    comments.write(match.group(7).strip() + '\r\n')
+                    cleaned_comments.write(cleaned.strip() + '\r\n')
+                    usernames.write(match.group(4) + '\r\n')
 
                     # [TEST FEATURE] mark those who only contain 'EMOTICON'
                     c = 0
@@ -125,6 +152,7 @@ class TwitchChatParser:
                         self.only_emote_index.append(i)
                     else:
                         self.only_emote_index.append(-1)
+
                 i += 1
 
         self._adjust_time(times)
@@ -136,7 +164,6 @@ class TwitchChatParser:
     def get_co_occurrence_matrix(self):
         return co_occurrence_matrix(self.logfile_info['token_lists'])
 
-    # [TODO] Find a deep learning of set_content
     def set_content(self, keywords):
         for i in range(len(self.logfile_info['token_lists'])):
             content = self._get_content(self.logfile_info['token_lists'][i][0], i, keywords)
@@ -234,6 +261,7 @@ class TwitchChatParser:
 
         print("[*] Save the parsed logs to %s" % save_f)
 
+    # [TODO] Find a deep learning for topic clustering
     def set_topics(self, topics, num_topics):
         k = 0
         for i in range(len(self.logfile_info['token_lists'])):
