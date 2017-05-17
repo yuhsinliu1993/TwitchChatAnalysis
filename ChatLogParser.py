@@ -20,6 +20,7 @@ class TwitchChatParser:
                         - a list of associated tags
                         - property
         """
+        self.streamer = streamer
 
         # shape = { logfiie: { "token_list": [], "utterances": [], "time": [], users_list = [], ref_time: int,  } }
         self.logfile_info = {}
@@ -38,7 +39,6 @@ class TwitchChatParser:
         self.kept_index = []
         self.command_bot_index = []  # i-th is the command or bot utterance
         self.only_emote_index = []
-        self.streamer = streamer
 
         try:
             self.streamer_emotes = get_streamer_emote(self.streamer)
@@ -102,7 +102,7 @@ class TwitchChatParser:
                 # self.logfile_info['time'].append((int(match.group(1))+int(match.group(2)))*60 + int(match.group(3)) - self.logfile_info['ref_time'])
                 times.append(int(match.group(1)) * 3600 + int(match.group(2)) * 60 + int(match.group(3)) - self.logfile_info['ref_time'])
 
-                cleaned = get_cleaned_text(match.group(7))
+                cleaned = get_cleaned_text(match.group(7), self.emotes, remove_stopwords=True, streamer=self.streamer, remove_emotes_or_words=True, digit_to_string=True)
 
                 self.logfile_info['utterances'].append(match.group(7).strip())
                 self.logfile_info['cleaned_utterances'].append(cleaned.strip())

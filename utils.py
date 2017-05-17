@@ -3,7 +3,8 @@ import re
 import json
 import operator
 import pandas as pd
-from nltk.corpus import stopwords
+import tensorflow as tf
+# from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from urllib2 import urlopen
 from collections import defaultdict, Counter
@@ -11,11 +12,13 @@ from collections import defaultdict, Counter
 
 wh_lists = ['why', 'how', 'where', 'when', 'what', 'which']
 
-pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'KappaPride', 'GoldenKappa', "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo", "LUL", "LOL"]
+pos_emo = ['PogChamp', '4Head', 'EleGiggle', 'Kappa', 'KappaPride', 'GoldenKappa', "MingLee", "Kreygasm", "TakeNRG", "GivePLZ", "HeyGuys", "SeemsGood", "VoteYea", "Poooound", "AMPTropPunch", "CoolStoryBob", "BloodTrail", "FutureMan", "FunRun", "VoHiYo", "LUL", "LOL", "XD", "gachigasm", "jebaited"]
 
 neg_emo = ['WutFace', "BabyRage", "FailFish", "DansGame", "BibleThump", "NotLikeThis", "PJSalt", "SwiftRage", "ResidentSleeper", "VoteNay", "BrokeBack", "rage", "WTF", 'rekt']
 
 robot_emotes = [":)", ":(", ":o", ":z", "B)", ":\\", ":|", ";)", ";p", ":p", ":>", "<]", ":7", "R)", "o_O", "#/", ":D", ">(", "<3", ":O"]
+
+stopwords = ['just', 'being', 'through', 'yourselves', 'its', 'before', 'herself', 'll', 'had', 'to', 'only', 'under', 'ours', 'has', 'them', 'his', 'very', 'they', 'during', 'now', 'him', 'this', 'she', 'each', 'further', 'few', 'doing', 'our', 'ourselves', 'out', 'for', 're', 'above', 'between', 'be', 'we', 'here', 'hers', 'by', 'on', 'about', 'of', 'against', 'or', 'own', 'into', 'yourself', 'down', 'mightn', 'your', 'from', 'her', 'their', 'there', 'been', 'whom', 'too', 'themselves', 'until', 'more', 'himself', 'that', 'with', 'than', 'those', 'he', 'me', 'myself', 'ma', 'up', 'will', 'below', 'theirs', 'my', 'and', 've', 'then', 'am', 'it', 'an', 'as', 'itself', 'at', 'in', 'any', 'if', 'again', 'same', 'other', 'you', 'shan', 'after', 'most', 'such', 'a', 'off', 'i', 'm', 'yours', 'so', 'y', 'having', 'once']
 
 
 def load_logfiles_from_dir(dir_path):
@@ -96,19 +99,18 @@ def build_dataset(words, vocabulary_size=5000):
     return data, count, dictionary, reverse_dictionary
 
 
-def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
+def get_cleaned_text(text, emotes=[], streamer=None, remove_stopwords=False, stem_words=False, remove_emotes_or_words=False, digit_to_string=False):
     # Clean the text, with the option to remove stopwords and to stem words.
 
     # Convert words to lower case and split them
-    words = text.lower().split()
 
     # Optionally, remove stop words
     if remove_stopwords:
-        stops = set(stopwords.words("english"))
-        stops.remove(u'not')
-        text = [w for w in words if not w in stops]
-
-    text = " ".join(words)
+        words = text.lower().split()
+        # stops = set(stopwords.words("english"))
+        # stops.remove(u'not')
+        words = [w for w in words if w not in stopwords]
+        text = " ".join(words)
 
     # Replace facial emotes && Clean the text
     text = re.sub(r"<3", " love you ", text)
@@ -125,28 +127,43 @@ def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
     text = re.sub(r":\(", " unhappy ", text)
     text = re.sub(r":\\", " unhappy ", text)
     text = re.sub(r":z", " unhappy ", text)
-    # text = re.sub(r"@(\w+)", " ", text)
-    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
-    text = re.sub(r"what's", "what is ", text)
-    text = re.sub(r"wasnt", "was not", text)
-    text = re.sub(r"werent", "were not", text)
-    text = re.sub(r"\'s", " ", text)
-    text = re.sub(r"\'ve", " have ", text)
+    text = re.sub(r"\(", " ( ", text)
+    text = re.sub(r"\)", " ) ", text)
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=@_\']", " ", text)
+    if streamer:
+        text = re.sub(r'@(' + re.escape(streamer.lower()) + r')', "\g<1>", text)
+    text = re.sub(r"@(\w+)", " ", text)
+    text = re.sub(r"g(g)+ ", " good game ", text)
+    text = re.sub(r" g(g)+$", " good game ", text)
+    text = re.sub(r"^g(g)+$", " good game ", text)
+    text = re.sub(r"g_g", " good game ", text)
+    text = re.sub(r"ggwp", " good game well play ", text)
     text = re.sub(r"can't", "cannot ", text)
     text = re.sub(r"cant", "cannot ", text)
+    text = re.sub(r"won t ", " will not ", text)
+    text = re.sub(r"won't ", " will not ", text)
+    text = re.sub(r" r ", " are ", text)
+    text = re.sub(r"\'s", " ", text)
+    text = re.sub(r"\'ve", " have ", text)
     text = re.sub(r"n't", " not ", text)
+    text = re.sub(r"what's", "what ", text)
+    text = re.sub(r"whats", "what ", text)
+    text = re.sub(r"wasnt", "was not", text)
+    text = re.sub(r"werent", "were not", text)
+    text = re.sub(r"shouldnt", "should not", text)
     text = re.sub(r"i'm", "i am ", text)
+    text = re.sub(r"im", "i am ", text)
     text = re.sub(r"\'re", " are ", text)
     text = re.sub(r"\'d", " would ", text)
     text = re.sub(r"\'ll", " will ", text)
     text = re.sub(r",", " ", text)
     text = re.sub(r"\.", " ", text)
-    text = re.sub(r"!", " ! ", text)
+    text = re.sub(r"!", " ", text)
     text = re.sub(r"\/", " ", text)
-    text = re.sub(r"\^", " ^ ", text)
-    text = re.sub(r"\+", " + ", text)
-    text = re.sub(r"\-", " - ", text)
-    text = re.sub(r"\=", " = ", text)
+    text = re.sub(r"\^", " ", text)
+    text = re.sub(r"\+", " ", text)
+    text = re.sub(r"\-", " ", text)
+    text = re.sub(r"\=", " ", text)
     text = re.sub(r"'", " ", text)
     text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
     text = re.sub(r":", " : ", text)
@@ -154,14 +171,43 @@ def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
     text = re.sub(r" 9 11 ", "911", text)
     text = re.sub(r" 9\/11 ", "911", text)
     text = re.sub(r"\s{2,}", " ", text)
-    text = re.sub(r"feels(\w+)man", "feels \g<1> man", text)
-    text = re.sub(r"feel(\w+)man", "feels \g<1> man", text)
-    text = re.sub(r"f(u)+ck", "fuck", text)
-    text = re.sub(r"l(o)+l", "lol", text)
-    text = re.sub(r"l(u)+l", "lul", text)
+    text = re.sub(r"feels(\w+)man", " feels \g<1> man ", text)
+    text = re.sub(r"fells(\w+)man", " feels \g<1> man ", text)
+    text = re.sub(r"feel(\w+)man", " feels \g<1> man ", text)
+    text = re.sub(r"f(u)+ck", " fuck ", text)
+    text = re.sub(r"l(o)+l", " lol ", text)
+    text = re.sub(r"l(u)+l", " lul ", text)
+    text = re.sub(r"w(o)+w", " wow ", text)
+    text = re.sub(r" s(o)+ ", " so ", text)
     text = re.sub(r"^u ", " you ", text)
     text = re.sub(r" u ", " you ", text)
-    text = re.sub(r" (\w)*kappa(\w)* ", " kappa ", text)
+    text = re.sub(r"(\w)*kappa(\w)*", " kappa ", text)
+    text = re.sub(r"omg", " oh my god ", text)
+    text = re.sub(r"wtf", " what the fuck ", text)
+    text = re.sub(r"yo good game", " yogg ", text)
+    text = re.sub(r"h e r t h s t o n e", " hearthstone ", text)
+    text = re.sub(r"h e a r t h s t o n e", " hearthstone ", text)
+    text = re.sub(r"c o n c e d e", " concede ", text)
+
+
+    if digit_to_string:
+        text = re.sub(r"0", " zero ", text)
+        text = re.sub(r"1", " one ", text)
+        text = re.sub(r"2", " two ", text)
+        text = re.sub(r"3", " three ", text)
+        text = re.sub(r"4", " four ", text)
+        text = re.sub(r"5", " five ", text)
+        text = re.sub(r"6", " six ", text)
+        text = re.sub(r"7", " seven ", text)
+        text = re.sub(r"8", " eight ", text)
+        text = re.sub(r"9", " nine ", text)
+
+    if remove_stopwords:
+        words = text.split()
+        # stops = set(stopwords.words("english"))
+        # stops.remove(u'not')
+        words = [w for w in words if w not in stopwords]
+        text = " ".join(words)
 
     # Optionally, shorten words to their stems
     if stem_words:
@@ -169,6 +215,9 @@ def get_cleaned_text(text, remove_stopwords=False, stem_words=False):
         stemmer = SnowballStemmer('english')
         stemmed_words = [stemmer.stem(word) for word in text]
         text = " ".join(stemmed_words)
+
+    if remove_emotes_or_words:
+        text = _remove_emotes_or_words(text, emotes)
 
     # Return a list of words
     return text
@@ -210,10 +259,80 @@ def fetch_twitch_emotes(twitch_emote_dir=None):
     for fn in os.listdir(twitch_emote_dir):
         emotes.append(os.path.splitext(fn)[0].lower())
 
+    if 'gachigasm' not in emotes:
+        emotes.append('gachigasm')
+
+    if 'jebaited' not in emotes:
+        emotes.append('jebaited')
+
+    if 'mrdestructoid' not in emotes:
+        emotes.append('mrdestructoid')
+
+    if 'monkas' not in emotes:
+        emotes.append('monkas')
+
+    if 'xd' not in emotes:
+        emotes.append('xd')
+
+    if 'smile' in emotes:
+        emotes.remove('smile')
+
+    if 'happy' in emotes:
+        emotes.remove('happy')
+
+    if 'love' in emotes:
+        emotes.remove('love')
+
     return emotes
 
 
-# emotes = fetch_twitch_emotes(twitch_emote_dir='TwitchEmotesPics')
+def _emote_only(sentence, emotes):
+    words = sentence.split()
+
+    for w in words:
+        if w not in emotes:
+            return False
+
+    return True
+
+
+def _remove_emotes_or_words(sentence, emotes):
+    """
+    if length of sentence less than 2 and include one word and one emote ==> remove the word
+    else if length of sentence large than
+    """
+
+    if _emote_only(sentence, emotes):
+        return sentence
+    else:
+        words = sentence.lower().split()
+        text = ""
+
+        e_count = 0
+        n_count = 0
+
+        for w in words:
+            if w in emotes:
+                e_count += 1
+            else:
+                n_count += 1
+
+        if len(words) <= 2 and e_count != 0:
+            for w in words:
+                if w in emotes:
+                    text = text + " " + w
+        if len(words) <= 2 and e_count == 0:
+            return sentence
+        elif len(words) > 2 and e_count >= n_count:
+            for w in words:
+                if w in emotes:
+                    text = text + " " + w
+        elif len(words) > 2 and e_count < n_count:
+            for w in words:
+                if w not in emotes:
+                    text = text + " " + w
+
+        return text
 
 
 def get_streamer_emote(streamer=None):
@@ -289,7 +408,7 @@ def most_common_cooccurrent_terms(co_matrix=None, n=5):
 
 
 def _tag_pos_sentence(sentence):
-    words = comment.split()
+    words = sentence.split()
     for w in words:
         if w in [p.lower() for p in pos_emo]:
             return True
@@ -298,7 +417,7 @@ def _tag_pos_sentence(sentence):
 
 
 def _tag_neg_sentence(sentence):
-    words = comment.split()
+    words = sentence.split()
     for w in words:
         if w in [p.lower() for p in neg_emo]:
             return True
@@ -346,19 +465,45 @@ def _sentence_questin(sentence):
     return False
 
 
-def handed_category_tagging(sentence, emotes, keywords, streamer):
+def _sentence_meme(sentence, meme_file=None):
+
+    if meme_file:
+        memes = []
+        with open(meme_file, 'r') as mf:
+            for l in mf:
+                memes.append(l)
+
+        for meme in memes:
+            if meme in sentence:
+                return True
+
+    return False
+
+
+def _sentence_find_repeat(sentence):
+    # [TODO] detect the repeated pattern of a given sentence
+    pass
+
+
+def handed_category_tagging(sentence, emotes, streamer, meme_file=None):
     """
     RETURN:
         1: EMOTEs ONLY
-        2: ABOUT THIJS
         3: NORMAL CONVERSATIONs
         4: QUESTIONs
+        5: MEMEs
+        6: Greetings
+        7: Congratz / Thanks
+        8: Fun
+        9: Others
     """
     if _sentence_only_emotes(sentence, emotes):
         return 1
-    elif _sentence_keyword(sentence, keywords):
-        return 2
     elif _sentence_questin(sentence):
         return 4
+    # elif _sentence_keyword(sentence, keywords):
+    #     return 2
+    elif _sentence_meme(sentence, meme_file):
+        return 5
     else:
         return ""

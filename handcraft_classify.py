@@ -14,7 +14,7 @@ parser.add_argument("-c", "--class", action='store_true', help="Add handed class
 parser.add_argument("-a", "--all", action='store_true', help="Add all handed analysis to cleaned comments")
 kwargs = vars(parser.parse_args())
 
-streamer = kwargs['streamer']
+streamer = kwargs['streamer'] if kwargs['streamer'] else None
 
 with open('global.yaml', 'r') as f:
     _global = yaml.load(f)
@@ -26,6 +26,7 @@ with open(os.path.join(streamerDir, 'local.yaml'), 'r') as f:
 log_dir = os.path.join(streamerDir, 'log')
 output_dir = os.path.join(streamerDir, 'output')
 saved_log_path = os.path.join(output_dir, 'cleaned_%s.txt' % streamer)
+meme_file_path = os.path.join(streamerDir, 'memes.txt')
 call(['mkdir', '-p', streamerDir + '/output/model'])
 
 if kwargs['file'] is not None:
@@ -43,13 +44,13 @@ else:
 
 if kwargs['all']:
     data['sentiment'] = data.comments.apply(handed_sentiment_tagging)
-    data['class'] = data.comments.apply(handed_category_tagging, args=(text_parser.emotes, _local['keywords'], streamer))
+    data['class'] = data.comments.apply(handed_category_tagging, args=(text_parser.emotes, streamer, meme_file_path))
 else:
     if kwargs['sentiment']:
         data['sentiment'] = data.comments.apply(handed_sentiment_tagging)
 
     if kwargs['class']:
-        data['class'] = data.comments.apply(anded_category_tagging, args=(text_parser.emotes, _local['keywords'], streamer))
+        data['class'] = data.comments.apply(handed_category_tagging, args=(text_parser.emotes, streamer, meme_file_path))
 
 csv = pd.DataFrame(data)
 csv.to_csv(os.path.join(output_dir, 'handed_classification.csv'))
