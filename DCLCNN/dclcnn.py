@@ -3,23 +3,22 @@ import tflearn
 import re
 
 
-class VDCNN(object):
+class DCLCNN(object):
     """
     Based on "Very Deep Convolutional Networks for Natural Language Processing" proposed by FACEBOOK AI RESEARCH TEAM.
     See https://arxiv.org/abs/1606.01781 for more infomations
     """
 
-    def __init__(self, X_input, y_input, num_classes=3, filter_size=3, l2_reg_weight_decay=0.001, sequence_max_length=512, num_quantized_chars=71, embedding_size=16, mode='train'):
-
+    def __init__(self, X_input, y_input, mode, num_classes, filter_size=3, l2_reg_weight_decay=0.001, sequence_max_length=512, num_quantized_chars=71, embedding_size=16):
         self.X_input = X_input
         self.y_input = y_input
+        self.mode = mode
         self.num_classes = num_classes
         self.filter_size = filter_size
         self.l2_reg_weight_decay = l2_reg_weight_decay
         self.sequence_max_length = sequence_max_length
         self.num_quantized_chars = num_quantized_chars
         self.embedding_size = embedding_size
-        self.mode = mode
 
         self.l2_loss = tf.constant(0.0)
         self.train_op = None
@@ -46,7 +45,7 @@ class VDCNN(object):
         for grad, var in grads_and_vars:
             if grad is not None:
                 name = re.sub(r':', '_', var.name)
-                grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(name), grad)
+                grad_hist_summary = tf.summary.histogram("{}/grad/histogram".format(name), grad)
                 sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(name), tf.nn.zero_fraction(grad))
                 self.grad_summaries.append(grad_hist_summary)
                 self.grad_summaries.append(sparsity_summary)
@@ -80,11 +79,13 @@ class VDCNN(object):
         with tf.name_scope("fc"):
             self.fc1 = self._fully_connected_layer(self.pooling, 512, scope='fc1', stddev=0.1)
             self.fc1 = tf.nn.relu(self.fc1)
+
             self.fc2 = self._fully_connected_layer(self.fc1, 512, scope='fc2', stddev=0.1)
             self.fc2 = tf.nn.relu(self.fc2)
-            self.fc3 = self._fully_connected_layer(self.fc2, self.num_classes, scope='fc3', stddev=0.1)
 
-        self.predictions = tf.nn.softmax(logits=self.fc3)
+            self.logits = self._fully_connected_layer(self.fc2, self.num_classes, scope='logits', stddev=0.1)
+
+        self.predictions = tf.nn.softmax(logits=self.logits)
         self.losses = self._loss()
         self.accuracy = self._accuracy()
 
@@ -118,7 +119,7 @@ class VDCNN(object):
 
     def _loss(self):
         with tf.variable_scope('losses'):
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.fc3, labels=self.y_input)
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y_input)
             losses = tf.reduce_mean(cross_entropy, name='corss_entropy')
             losses += self._l2_decay()
 

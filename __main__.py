@@ -72,7 +72,7 @@ def main(**kwargs):
     # biterm.FileIndeXing(saved_log_path, output_dir)  # doc_wids.txt, vocabulary.txt
 
     # # ==== biterm topic modeling ====
-    # call(['bash', './run.sh', str(kwargs['num_topics']), streamer])
+    # call(['bash', './run_btm.sh', str(kwargs['num_topics']), streamer])
 
     # topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
     # text_parser.set_topics(topics, kwargs['num_topics'])
