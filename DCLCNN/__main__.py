@@ -62,15 +62,15 @@ def do_eval(eval_data, sess, model, summary_op, summary_writer):
     print("---------------\n")
 
 
-def train_sentiment(X_train, y_train, eval_data, mode='train'):
+def train_sentiment(X_train, y_train, eval_data):
     with tf.Graph().as_default():
         sess = tf.Session()
 
         with sess.as_default():
-            dclcnn = DCLCNN(X_train, y_train, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode='train')
+            dclcnn = DCLCNN(X_train, y_train, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode=FLAGS.mode)
             dclcnn.build_graph()
 
-            print("[*] Writing to %s\n" % FLAGS.output_dir)
+            print("[*] Writing to %s/sentiment/\n" % FLAGS.output_dir)
             train_summary_op = tf.summary.merge([dclcnn.grad_summaries, dclcnn.acc_summary, dclcnn.loss_summary])
             train_summary_dir = os.path.join(FLAGS.output_dir, "sentiment", "summaries", "train")
             train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
@@ -113,15 +113,15 @@ def train_sentiment(X_train, y_train, eval_data, mode='train'):
                     print("Saved model checkpoint to {}\n".format(path))
 
 
-def train_comment(X_train, y_train, eval_data, mode='train'):
+def train_comment(X_train, y_train, eval_data):
     with tf.Graph().as_default():
         sess = tf.Session()
 
         with sess.as_default():
-            dclcnn = DCLCNN(X_train, y_train, num_classes=FLAGS.n_comment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode='train')
+            dclcnn = DCLCNN(X_train, y_train, num_classes=FLAGS.n_comment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode=FLAGS.mode)
             dclcnn.build_graph()
 
-            print("[*] Writing to %s\n" % FLAGS.output_dir)
+            print("[*] Writing to %s/comment/\n" % FLAGS.output_dir)
             train_summary_op = tf.summary.merge([dclcnn.grad_summaries, dclcnn.acc_summary, dclcnn.loss_summary])
             train_summary_dir = os.path.join(FLAGS.output_dir, "comment", "summaries", "train")
             train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
@@ -190,7 +190,7 @@ def _infer_sentiment(X, y, comment):
         sess = tf.Session()
 
         with sess.as_default():
-            dclcnn = DCLCNN(X, y, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode='infer')
+            dclcnn = DCLCNN(X, y, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode=FLAGS.mode)
             dclcnn.build_graph()
 
             checkpoint_dir = os.path.join(FLAGS.output_dir, "sentiment", "checkpoints")
@@ -217,7 +217,7 @@ def _infer_comment(X, y, comment):
         sess = tf.Session()
 
         with sess.as_default():
-            dclcnn = DCLCNN(X, y, num_classes=FLAGS.n_comment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode='infer')
+            dclcnn = DCLCNN(X, y, num_classes=FLAGS.n_comment_classes, embedding_size=FLAGS.embedding_size, l2_reg_weight_decay=FLAGS.l2_weight_decay, mode=FLAGS.mode)
             dclcnn.build_graph()
 
             checkpoint_dir = os.path.join(FLAGS.output_dir, "comment", "checkpoints")
@@ -240,7 +240,7 @@ def _infer_comment(X, y, comment):
 
 
 def main(_):
-    if FLAGS.train:
+    if FLAGS.mode == 'train':
         X_train, y_train_sentiment, y_train_comment = get_input_data_from_csv(FLAGS.input_data, FLAGS.max_feature_length)
         y_train_sentiment = to_categorical(y_train_sentiment, FLAGS.n_sentiment_classes)
         y_train_comment = to_categorical(y_train_comment, FLAGS.n_comment_classes)
@@ -266,7 +266,7 @@ def main(_):
         print("[*] Start training comments ...")
         comment_eval_dict = {'X_dev': X_dev, 'y_dev': y_dev_comment}
         train_comment(X_train, y_train_comment, comment_eval_dict)
-    elif FLAGS.infer:
+    elif FLAGS.mode == 'infer':
         inference(FLAGS.test_data, FLAGS.max_feature_length)
     else:
         pass
@@ -353,14 +353,10 @@ if __name__ == '__main__':
         help='Specify max feature length'
     )
     parser.add_argument(
-        '--train',
-        action='store_true',
-        help='Specify mode: training',
-    )
-    parser.add_argument(
-        '--infer',
-        action='store_true',
-        help='Specify mode: inferring',
+        '--mode',
+        type=str,
+        help='Specify mode (train or infer)',
+        required=True
     )
 
     FLAGS, unparsed = parser.parse_known_args()

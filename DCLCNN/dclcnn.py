@@ -1,5 +1,5 @@
 import tensorflow as tf
-import tflearn
+# import tflearn
 import re
 
 
@@ -100,12 +100,14 @@ class DCLCNN(object):
             filter_shape1 = [3, 1, _input.get_shape()[3], filter_num]
             filter_1 = tf.get_variable('filter1', filter_shape1, initializer=tf.random_normal_initializer(stddev=0.05))
             conv1 = tf.nn.conv2d(_input, filter_1, strides=[1, 1, filter_shape1[1], 1], padding="SAME")
-            batch_norm1 = tflearn.layers.normalization.batch_normalization(conv1, scope="%s_BN1" % scope)
+            batch_norm1 = tf.layers.batch_normalization(conv1, name="%s_BN1" % scope)
+            # batch_norm1 = tflearn.layers.normalization.batch_normalization(conv1, scope="%s_BN1" % scope)
 
             filter_shape2 = [3, 1, batch_norm1.get_shape()[3], filter_num]
             filter_2 = tf.get_variable('fileer2', filter_shape2, initializer=tf.random_normal_initializer(stddev=0.05))
             conv2 = tf.nn.conv2d(tf.nn.relu(batch_norm1), filter_2, strides=[1, 1, filter_shape2[1], 1], padding="SAME")
-            batch_normal2 = tflearn.layers.normalization.batch_normalization(conv2, scope="%s_BN2" % scope)
+            batch_normal2 = tf.layers.batch_normalization(conv2, name="%s_BN2" % scope)
+            # batch_normal2 = tflearn.layers.normalization.batch_normalization(conv2, scope="%s_BN2" % scope)
 
             return tf.nn.max_pool(tf.nn.relu(batch_normal2), ksize=[1, 3, 1, 1], strides=[1, 2, 1, 1], padding='SAME', name="pool1")
 
@@ -113,7 +115,8 @@ class DCLCNN(object):
         with tf.variable_scope(scope):
             filter_1 = tf.get_variable('filter1', filter_shape, initializer=tf.random_normal_initializer(stddev=0.05))
             conv = tf.nn.conv2d(_input, filter_1, strides=strides, padding="SAME")
-            conv = tflearn.layers.normalization.batch_normalization(conv, scope="%s_BN" % scope)
+            conv = tf.layers.batch_normalization(conv, name="%s_BN" % scope)
+            # conv = tflearn.layers.normalization.batch_normalization(conv, scope="%s_BN" % scope)
 
             return conv
 
