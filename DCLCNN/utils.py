@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+ =<>()[]{}"  # len: 69
+ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:\'\"/\\|_@#$%^&*~`+ =<>()[]{}"  # len: 69
 FEATURE_LEN = 512
 
 
