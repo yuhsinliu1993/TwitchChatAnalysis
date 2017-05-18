@@ -1,4 +1,9 @@
-# Twitch Chatting Log Analysis
+# Twitch Chatting Log Analysis #
+  Classify twitch chat in several fields.
+  1. Sentiment
+  2. Comment's Content
+  3. Relation
+
 
 - Required python package
    - nltk
@@ -19,25 +24,3 @@ optional arguments:
   -f     Indicate log file location
   -e     emotes join topic modeling
 ```
-## Result: analysis.csv ##
-
-fields: time, topic, relation, emotion, content, comment
-
-### topic ###
-   - Adopted Biterm Topic Modeling
-
-### relation ###
-   - 1: relaterd
-   - 2: unrelated
-
-### emotion ###
-
-
-### content type ###
-   - 1: Subscriber only
-   - 2: Emote only
-   - 3: Bot and Command
-   - 4: Question
-   - 5: Normal conversation (without subs)
-   - 6: Self-defined keywords
-
