@@ -13,16 +13,17 @@
  - tflearn
 
 ## Usage ##
-```python
-usage: python . [-h] [-c] [-n NUM_TOPICS] [-f LOGFILE] [-e] streamer
+```
+usage: __main__.py [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
 
 positional arguments:
-  streamer     Specify a streamer's twitch name
+  streamer              Specify a streamer's twitch name
 
 optional arguments:
-  -h     show this help message and exit
-  -c     clean the unuseful data
-  -n     Specify the num of topics for LDA modeling
-  -f     Indicate log file location
-  -e     emotes join topic modeling
+  -h, --help            show this help message and exit
+  -c, --clean           clean the unuseful data
+  -n NUM_TOPICS, --num-topics NUM_TOPICS
+                        Specify the num of topics for LDA modeling
+  -f FILE, --file FILE  Indicate log file location
+  -e, --emote           emotes join topic modeling
 ```
