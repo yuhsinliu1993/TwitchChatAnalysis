@@ -14,7 +14,7 @@
 
 ## Usage ##
 ```
-usage: __main__.py [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
+usage: python __main__.py [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
 
 positional arguments:
   streamer              Specify a streamer's twitch name
