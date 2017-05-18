@@ -5,8 +5,8 @@ import re
 
 class DCLCNN(object):
     """
-    Based on "Very Deep Convolutional Networks for Natural Language Processing" proposed by FACEBOOK AI RESEARCH TEAM.
-    See https://arxiv.org/abs/1606.01781 for more infomations
+    Implementation of `Deep Character-Level Convolutional Neural Network` Model based on "Very Deep Convolutional Networks for Natural Language Processing" proposed by FACEBOOK AI RESEARCH TEAM.
+    See https://arxiv.org/abs/1606.01781 for more infomations.
     """
 
     def __init__(self, X_input, y_input, mode, num_classes, filter_size=3, l2_reg_weight_decay=0.001, sequence_max_length=512, num_quantized_chars=71, embedding_size=16):
@@ -20,12 +20,11 @@ class DCLCNN(object):
         self.num_quantized_chars = num_quantized_chars
         self.embedding_size = embedding_size
 
-        self.l2_loss = tf.constant(0.0)
-        self.train_op = None
         self._extra_train_ops = []
 
     def build_graph(self):
         self.global_step = tf.contrib.framework.get_or_create_global_step()
+        self.l2_loss = tf.constant(0.0)
         self._build_model()
 
         if self.mode == 'train':
@@ -51,6 +50,7 @@ class DCLCNN(object):
                 self.grad_summaries.append(sparsity_summary)
 
     def _build_model(self):
+
         self.X_input = tf.placeholder(tf.int32, [None, self.sequence_max_length], name="X_input")
         self.y_input = tf.placeholder(tf.float32, [None, self.num_classes], name="y_input")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")

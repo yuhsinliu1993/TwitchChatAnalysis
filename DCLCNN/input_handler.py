@@ -49,9 +49,16 @@ def get_input_data_from_csv(file_path, max_feature_length):
     return np.asarray(comments, dtype='int32'), np.asarray(sentiments, dtype='int32'), np.asarray(classes, dtype='int32')
 
 
-def get_input_data_from_text(text, sentiment, _class, max_feature_length):
+def get_input_data_from_text(text, sentiment_class, comment_class, max_feature_length):
     X = np.asarray([get_vectorized_comment(text)], dtype='int32')
-    y_sentiment = np.asarray([int(sentiment) + 1], dtype='int32')
-    y_comment = np.asarray([_class], dtype='int32')
+    if sentiment_class is not None:
+        y_sentiment = np.asarray([int(comment_class) + 1], dtype='int32')
+    else:
+        y_sentiment = None
+
+    if comment_class is not None:
+        y_comment = np.asarray([comment_class], dtype='int32')
+    else:
+        y_comment = None
 
     return X, y_sentiment, y_comment

@@ -142,6 +142,7 @@ def get_cleaned_text(text, emotes=[], streamer=None, remove_stopwords=False, ste
     text = re.sub(r"cant", "cannot ", text)
     text = re.sub(r"won t ", " will not ", text)
     text = re.sub(r"won't ", " will not ", text)
+    text = re.sub(r"idk", " i don't know ", text)
     text = re.sub(r" r ", " are ", text)
     text = re.sub(r"\'s", " ", text)
     text = re.sub(r"\'ve", " have ", text)
@@ -188,7 +189,6 @@ def get_cleaned_text(text, emotes=[], streamer=None, remove_stopwords=False, ste
     text = re.sub(r"h e r t h s t o n e", " hearthstone ", text)
     text = re.sub(r"h e a r t h s t o n e", " hearthstone ", text)
     text = re.sub(r"c o n c e d e", " concede ", text)
-
 
     if digit_to_string:
         text = re.sub(r"0", " zero ", text)
