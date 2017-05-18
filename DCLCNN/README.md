@@ -1,4 +1,4 @@
-# Very Deep Convolutional Neural Network For Text Classification #
+# Deep Character-Level Convolutional Neural Network For Text Classification #
 
 ## Usage ##
 ```
