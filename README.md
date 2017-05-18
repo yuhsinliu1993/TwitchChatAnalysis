@@ -1,14 +1,16 @@
 # Twitch Chatting Log Analysis #
-  Classify twitch chat in several fields.
+  Using Deep Learning to classify twitch chat in several fields.
   1. Sentiment
   2. Comment's Content
   3. Relation
 
 
-- Required python package
-   - nltk
-   - gensim
-   - stop_words
+## Required python package ##
+ - nltk
+ - gensim
+ - yaml
+ - tensorflow
+ - tflearn
 
 ## Usage ##
 ```python
