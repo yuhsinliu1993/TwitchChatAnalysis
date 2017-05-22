@@ -1,8 +1,10 @@
 # Deep Character-Level Convolutional Neural Network For Text Classification #
 
-## Usage ##
+Usage
+-----
+
 ```
-python __main__.py [-h] [--n_sentiment_classes N_SENTIMENT_CLASSES]
+usage: run.py [-h] [--n_sentiment_classes N_SENTIMENT_CLASSES]
                    [--n_comment_classes N_COMMENT_CLASSES]
                    [--num_epochs NUM_EPOCHS] [--batch_size BATCH_SIZE]
                    [--input_data INPUT_DATA] [--test_data TEST_DATA]

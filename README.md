@@ -1,8 +1,8 @@
 # Twitch Chatting Log Analysis #
-  Using Deep Learning to classify twitch chat in several fields.
-  1. Sentiment
-  2. Comment's Content
-  3. Relation
+  Analyzing twitch chat logs in three fields.
+  1. Topic Modeling
+  2. Sentiment Analysis
+  3. Comment's Content Classificatin
 
 
 ## Required python package ##
@@ -14,7 +14,7 @@
 
 ## Usage ##
 ```
-usage: python __main__.py [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
+usage: __main__.py [-h] [-c] [-n NUM_TOPICS] [-f FILE] [-e] streamer
 
 positional arguments:
   streamer              Specify a streamer's twitch name

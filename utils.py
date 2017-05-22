@@ -138,6 +138,8 @@ def get_cleaned_text(text, emotes=[], streamer=None, remove_stopwords=False, ste
     text = re.sub(r"^g(g)+$", " good game ", text)
     text = re.sub(r"g_g", " good game ", text)
     text = re.sub(r"ggwp", " good game well play ", text)
+    text = re.sub(r"don t", "do not ", text)
+    text = re.sub(r"don't", "do not ", text)
     text = re.sub(r"can't", "cannot ", text)
     text = re.sub(r"cant", "cannot ", text)
     text = re.sub(r"won t ", " will not ", text)
