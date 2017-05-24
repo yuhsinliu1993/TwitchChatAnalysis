@@ -7,7 +7,9 @@ import datetime
 from six.moves import xrange  # pylint: disable=redefined-builtin
 from utils import *
 from input_handler import get_input_data_from_csv, batch_generator, get_input_data_from_text
-from dclcnn import DCLCNN
+from dclcnn import DCLCNN, DCLCNN2
+
+from keras.callbacks import ModelCheckpoint
 
 tf.logging.set_verbosity(tf.logging.INFO)
 # Basic model parameters as external flags.
@@ -88,6 +90,36 @@ def do_eval(eval_data, sess, model, summary_op, summary_writer):
     print("Average accuracy = %.4f" % avg_acc)
     print("Average loss = %.4f " % avg_loss)
     print("---------------\n")
+
+
+def train_sentiment(input_file, max_feature_length, n_class, embedding_size, learning_rate, batch_size, num_epochs, save_dir=None):
+    # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
+    X_train, y_train_sentiment, _ = get_input_data_from_csv(input_file, max_feature_length)
+    y_train_sentiment = to_categorical(y_train_sentiment, n_class)
+
+    # Stage 2: Build Model
+    num_filters = [64, 128, 256]
+    dclcnn = DCLCNN2(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate, top_k=4)
+
+    model = dclcnn.build_model()
+
+    if FLAGS.load_model is not None:
+        model.load_weights(FLAGS.load_model)
+
+    # Stage 3: Training
+    save_dir = save_dir if save_dir is not None else 'checkpoints'
+    filepath = os.path.join(save_dir, "weights.hdf5")
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    model.fit(
+        x=X_train,
+        y=y_train_sentiment,
+        batch_size=batch_size,
+        epochs=num_epochs,
+        validation_split=0.33,
+        # callbacks=[checkpoint],
+        shuffle=True,
+        verbose=True
+    )
 
 
 def _train_sentiment(X_train, y_train, eval_data):
@@ -267,7 +299,8 @@ def _infer_comment(X, y, comment):
 
 def run(_):
     if FLAGS.mode == 'train':
-        train(FLAGS.input_data, FLAGS.max_feature_length)
+        # train(FLAGS.input_data, FLAGS.max_feature_length)
+        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, n_class=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs)
     elif FLAGS.mode == 'eval':
         pass
     elif FLAGS.mode == 'infer':
@@ -299,8 +332,20 @@ if __name__ == '__main__':
     parser.add_argument(
         '--batch_size',
         type=int,
-        default=32,
-        help='Batch size.  Must divide evenly into the dataset sizes.'
+        default=64,
+        help='Batch size. Must divide evenly into the dataset sizes.'
+    )
+    parser.add_argument(
+        '--learning_rate',
+        type=float,
+        default=0.01,
+        help='Specify learning rate'
+    )
+    parser.add_argument(
+        '--optimizer',
+        type=str,
+        default='sgd',
+        help='Specify optimizer'
     )
     parser.add_argument(
         '--input_data',
@@ -361,6 +406,11 @@ if __name__ == '__main__':
         type=str,
         help='Specify mode: `train` or `eval` or `infer`',
         required=True
+    )
+    parser.add_argument(
+        '--load_model',
+        type=str,
+        help='Specify the location of model weights',
     )
 
     FLAGS, unparsed = parser.parse_known_args()

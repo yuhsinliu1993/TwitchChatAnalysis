@@ -40,3 +40,7 @@ def to_categorical(y, nb_classes=None):
         Y[i, y[i]] = 1.
 
     return Y
+
+
+def get_conv_shape(conv):
+    return conv.get_shape().as_list()[1:]

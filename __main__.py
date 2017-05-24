@@ -61,31 +61,28 @@ def main(**kwargs):
 
     # [EXP] Filter out the token which appears only one time
 
-    # text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
-    # text_parser.sentiment_analysis()
+    text_parser.dictionary_tagger(_global['sentimentfilesDir'])  # Before sentiment analysis
+    text_parser.sentiment_analysis()
 
-    # """
-    # [TODO] Using deep learning to do clustering the data
-    # """
-    # # ==== Bursty Biterm Topic Modeling ====
-    # biterm = BTM(num_topics=kwargs['num_topics'])
-    # biterm.FileIndeXing(saved_log_path, output_dir)  # doc_wids.txt, vocabulary.txt
+    # ==== Bursty Biterm Topic Modeling ====
+    biterm = BTM(num_topics=kwargs['num_topics'])
+    biterm.FileIndeXing(saved_log_path, output_dir)  # doc_wids.txt, vocabulary.txt
 
-    # # ==== biterm topic modeling ====
-    # call(['bash', './run_btm.sh', str(kwargs['num_topics']), streamer])
+    # ==== biterm topic modeling ====
+    call(['bash', './run_btm.sh', str(kwargs['num_topics']), streamer])
 
-    # topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
-    # text_parser.set_topics(topics, kwargs['num_topics'])
-    # text_parser.set_relation(threshold=_local['relation_threshold'])
-    # text_parser.save_analysis(output_dir)
+    topics = biterm.get_topics_distributions(output_dir, show=True, save=True)
+    text_parser.set_topics(topics, kwargs['num_topics'])
+    text_parser.set_relation(threshold=_local['relation_threshold'])
+    text_parser.save_analysis(output_dir)
 
-    # # ==== Get Parameters ====
-    # print('\n============ Paramerters ============')
-    # print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
-    # print('TOPIC_NUM: %d' % kwargs['num_topics'])
+    # ==== Get Parameters ====
+    print('\n============ Paramerters ============')
+    print('COMMENT_NUM: %d' % len(text_parser.logfile_info['utterances']))
+    print('TOPIC_NUM: %d' % kwargs['num_topics'])
 
-    # if kwargs['clean']:
-    #     call(['rm', streamerDir + '/output/doc_wids.txt'])
+    if kwargs['clean']:
+        call(['rm', streamerDir + '/output/doc_wids.txt'])
 
 
 if __name__ == '__main__':
