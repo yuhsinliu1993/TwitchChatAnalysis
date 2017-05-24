@@ -5,90 +5,14 @@ import sys
 import argparse
 import datetime
 from six.moves import xrange  # pylint: disable=redefined-builtin
-from utils import to_categorical, get_conv_shape
+from utils import to_categorical
 from input_handler import get_input_data_from_csv, batch_generator, get_input_data_from_text
 from dclcnn import DCLCNN
-from Layers import ConvBlockLayer
-
-from keras.models import Model
-from keras.layers.convolutional import Conv1D
-from keras.layers.embeddings import Embedding
-from keras.layers import Input, Dense, Dropout, Lambda
-from keras.layers.pooling import MaxPooling1D
-from keras.optimizers import SGD
-from keras.callbacks import ModelCheckpoint
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
 # Basic model parameters as external flags.
 FLAGS = None
-
-
-def build_model(num_filters, num_classes, sequence_max_length=512, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=3):
-    inputs = Input(shape=(sequence_max_length, ), dtype='int32', name='inputs')
-    embedded_sent = Embedding(num_quantized_chars, embedding_size, input_length=sequence_max_length)(inputs)
-
-    # First conv layer
-    conv = Conv1D(filters=64, kernel_size=3, strides=2, padding="same")(embedded_sent)
-
-    # Each ConvBlock with one MaxPooling Layer
-    for i in range(len(num_filters)):
-        conv = ConvBlockLayer(get_conv_shape(conv), num_filters[i])(conv)
-        conv = MaxPooling1D(pool_size=3, strides=2, padding="same")(conv)
-
-    # k-max pooling (Finds values and indices of the k largest entries for the last dimension)
-    def _top_k(x):
-        x = tf.transpose(x, [0, 2, 1])
-        k_max = tf.nn.top_k(x, k=top_k)
-        return tf.reshape(k_max[0], (-1, num_filters[-1] * top_k))
-    k_max = Lambda(_top_k, output_shape=(num_filters[-1] * top_k,))(conv)
-
-    # 3 fully-connected layer with dropout regularization
-    fc1 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(k_max))
-    fc2 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(fc1))
-    fc3 = Dense(num_classes, activation='softmax')(fc2)
-
-    # define optimizer
-    sgd = SGD(lr=learning_rate, decay=1e-6, momentum=0.9, nesterov=False)
-
-    model = Model(inputs=inputs, outputs=fc3)
-    model.compile(optimizer=sgd, loss='mean_squared_error', metrics=['accuracy'])
-
-    if FLAGS.load_model is not None:
-        model.load_weights(FLAGS.load_model)
-
-    return model
-
-
-def train_sentiment(input_file, max_feature_length, n_class, embedding_size, learning_rate, batch_size, num_epochs, save_dir=None):
-    # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
-    X_train, y_train_sentiment, _ = get_input_data_from_csv(input_file, max_feature_length)
-    y_train_sentiment = to_categorical(y_train_sentiment, n_class)
-
-    # Stage 2: Build Model
-    num_filters = [64, 128, 256, 512]
-    # dclcnn = DCLCNN2(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate)
-
-    model = build_model(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate)
-
-    # Stage 3: Training
-    save_dir = save_dir if save_dir is not None else 'checkpoints'
-    filepath = os.path.join(save_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
-    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-
-    if FLAGS.verbose:
-        print(model.summary())
-
-    model.fit(
-        x=X_train,
-        y=y_train_sentiment,
-        batch_size=batch_size,
-        epochs=num_epochs,
-        validation_split=0.33,
-        callbacks=[checkpoint],
-        shuffle=True,
-        verbose=FLAGS.verbose
-    )
 
 
 def train(input_file, max_feature_length):
@@ -344,8 +268,7 @@ def _infer_comment(X, y, comment):
 
 def run(_):
     if FLAGS.mode == 'train':
-        # train(FLAGS.input_data, FLAGS.max_feature_length)
-        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, n_class=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs)
+        train(FLAGS.input_data, FLAGS.max_feature_length)
     elif FLAGS.mode == 'eval':
         pass
     elif FLAGS.mode == 'infer':
@@ -405,6 +328,12 @@ if __name__ == '__main__':
         help='Specify test data path'
     )
     parser.add_argument(
+        '--save_dir',
+        type=str,
+        default='checkpoints',
+        help='Specify checkpoint directory'
+    )
+    parser.add_argument(
         '--output_dir',
         type=str,
         default='/Users/Michaeliu/Twitch/DCLCNN/TRAIN_MODEL',
@@ -425,7 +354,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--max_feature_length',
         type=int,
-        default=512,
+        default=128,
         help='Specify max feature length'
     )
     parser.add_argument(

@@ -1,6 +1,6 @@
 import numpy as np
 import csv
-from utils import get_vectorized_comment
+from utils import get_comment_ids
 
 
 def batch_generator(X, y, batch_size, num_epochs, shuffle=True):
@@ -42,7 +42,7 @@ def get_input_data_from_csv(file_path, max_feature_length):
         reader = csv.DictReader(f, fieldnames=['id', 'comments', 'sentiment', 'class'])
         for i, row in enumerate(reader):
             if i > 0:
-                comments.append(get_vectorized_comment(row['comments'], max_feature_length))
+                comments.append(get_comment_ids(row['comments'], max_feature_length))
                 sentiments.append(int(row['sentiment']) + 1)
                 classes.append(int(row['class']))
 
@@ -50,7 +50,7 @@ def get_input_data_from_csv(file_path, max_feature_length):
 
 
 def get_input_data_from_text(text, sentiment_class, comment_class, max_feature_length):
-    X = np.asarray([get_vectorized_comment(text)], dtype='int32')
+    X = np.asarray([get_comment_ids(text)], dtype='int32')
     if sentiment_class is not None:
         y_sentiment = np.asarray([int(sentiment_class) + 1], dtype='int32')
     else:
