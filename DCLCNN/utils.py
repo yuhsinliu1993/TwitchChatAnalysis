@@ -1,3 +1,5 @@
+import os
+import glob
 import numpy as np
 
 
@@ -43,3 +45,9 @@ def to_categorical(y, nb_classes=None):
 
 def get_conv_shape(conv):
     return conv.get_shape().as_list()[1:]
+
+
+def find_newest_checkpoint(checkpoint_dir):
+    files_path = os.path.join(checkpoint_dir, '*')
+    files = sorted(glob.iglob(files_path), key=os.path.getctime, reverse=True)
+    return files[0]

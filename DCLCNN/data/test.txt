@@ -1,2 +1,2 @@
-play yogg and praise to rng,0,3
-kappa,1,1
+play yogg and praise to rng
+kappa

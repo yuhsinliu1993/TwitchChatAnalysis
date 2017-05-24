@@ -5,7 +5,7 @@ import sys
 import argparse
 import datetime
 from six.moves import xrange  # pylint: disable=redefined-builtin
-from utils import to_categorical
+from utils import to_categorical, find_newest_checkpoint
 from input_handler import get_input_data_from_csv, batch_generator, get_input_data_from_text
 from dclcnn import DCLCNN
 

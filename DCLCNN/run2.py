@@ -1,9 +1,12 @@
-import tensorflow as tf
 import os
 import sys
 import argparse
-from utils import to_categorical, get_conv_shape
+import tensorflow as tf
+import numpy as np
+
+from utils import to_categorical, get_conv_shape, get_comment_ids, find_newest_checkpoint
 from input_handler import get_input_data_from_csv, get_input_data_from_text
+
 from Layers import ConvBlockLayer
 
 from keras.models import Model
@@ -18,9 +21,10 @@ from keras.callbacks import ModelCheckpoint
 tf.logging.set_verbosity(tf.logging.INFO)
 # Basic model parameters as external flags.
 FLAGS = None
+num_filters = [16, 32, 64, 128]
 
 
-def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=2):
+def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=2, load_pretrained_model=False):
     inputs = Input(shape=(sequence_max_length, ), dtype='int32', name='inputs')
     embedded_sent = Embedding(num_quantized_chars, embedding_size, input_length=sequence_max_length)(inputs)
 
@@ -50,8 +54,11 @@ def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized
     model = Model(inputs=inputs, outputs=fc3)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
-    if FLAGS.load_model is not None:
-        model.load_weights(FLAGS.load_model)
+    if load_pretrained_model:
+        if FLAGS.load_model is None:
+            model.load_weights(find_newest_checkpoint(FLAGS.checkpoint_dir))
+        else:
+            model.load_weights(FLAGS.load_model)
 
     return model
 
@@ -62,7 +69,7 @@ def train_sentiment(input_file, max_feature_length, n_class, embedding_size, lea
     y_train_sentiment = to_categorical(y_train_sentiment, n_class)
 
     # Stage 2: Build Model
-    model = build_model(num_filters=[16, 32, 64, 128], num_classes=n_class, sequence_max_length=FLAGS.max_feature_length, embedding_size=embedding_size, learning_rate=learning_rate)
+    model = build_model(num_filters=num_filters, num_classes=n_class, sequence_max_length=FLAGS.max_feature_length, embedding_size=embedding_size, learning_rate=learning_rate, load_pretrained_model=FLAGS.load_pretrain)
 
     # Stage 3: Training
     save_dir = save_dir if save_dir is not None else 'checkpoints'
@@ -86,17 +93,61 @@ def train_sentiment(input_file, max_feature_length, n_class, embedding_size, lea
     )
 
 
-def do_inference(test_data, max_feature_length):
-    pass
+def do_evaluation(eval_data, max_feature_length):
+    if FLAGS.load_model is None:
+        raise ValueError("You need to specify the model location by --load_model=[location]")
+
+    # Load Testing Data
+    comments = []
+    sentiments = []
+    comment_classes = []
+
+    with open(eval_data, 'r') as f:
+        for line in f.readlines():
+            comment, sentiment, _class = line.split(',')
+            comments.append(comment)
+            sentiments.append(sentiment)
+            comment_classes.append(_class)
+
+    for i in xrange(len(comments)):
+        X, y_sentiment, y_comment = get_input_data_from_text(comments[i], sentiments[i], comment_classes[i], max_feature_length)
+        y_sentiment = to_categorical(y_sentiment, FLAGS.n_sentiment_classes)
+        y_comment = to_categorical(y_comment, FLAGS.n_comment_classes)
+
+        sentiment_model = build_model(num_filters=num_filters, num_classes=FLAGS.n_sentiment_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
+
+        comment_model = build_model(num_filters=num_filters, num_classes=FLAGS.n_comment_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
+
+        sentiment_loss_and_history = sentiment_model.evaluate(X, y_sentiment, batch_size=FLAGS.batch_size, verbose=1)
+        comment_loss_and_history = comment_model.evaluate(X, y_sentiment, batch_size=FLAGS.batch_size, verbose=1)
+        # print(sentiment_loss_and_history)
+        # print("[*] ACCURACY OF TEST DATA: %.4f" % accuracy)
+
+
+def do_sentiment_prediction(test_data, num_classes, max_feature_length):
+    if FLAGS.load_model is None:
+        raise ValueError("You need to specify the model location by --load_model=[location]")
+
+    # Load Testing Data
+    comments = []
+    with open(test_data, 'r') as f:
+        for comment in f.readlines():
+            comments.append(get_comment_ids(comment, max_feature_length))
+
+    X = np.asarray(comments, dtype='int32')
+    print X.shape
+    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
+
+    predictions = model.predict(X, batch_size=FLAGS.batch_size, verbose=1)
 
 
 def run(_):
     if FLAGS.mode == 'train':
-        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, n_class=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, save_dir=FLAGS.save_dir, print_summary=FLAGS.print_summary)
+        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, n_class=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, save_dir=FLAGS.checkpoint_dir, print_summary=FLAGS.print_summary)
     elif FLAGS.mode == 'eval':
-        pass
-    elif FLAGS.mode == 'infer':
-        do_inference(FLAGS.test_data, FLAGS.max_feature_length)
+        do_evaluation(FLAGS.test_data, FLAGS.max_feature_length)
+    elif FLAGS.mode == 'pred':
+        do_sentiment_prediction(FLAGS.test_data, FLAGS.n_sentiment_classes, FLAGS.max_feature_length)
     else:
         pass
 
@@ -152,7 +203,7 @@ if __name__ == '__main__':
         help='Specify test data path'
     )
     parser.add_argument(
-        '--save_dir',
+        '--checkpoint_dir',
         type=str,
         default='checkpoints',
         help='Specify checkpoint directory'
@@ -202,7 +253,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mode',
         type=str,
-        help='Specify mode: `train` or `eval` or `infer`',
+        help='Specify mode: `train` or `eval` or `pred`',
         required=True
     )
     parser.add_argument(
@@ -220,6 +271,12 @@ if __name__ == '__main__':
         '--print_summary',
         action='store_true',
         help='Print out model summary',
+        default=False
+    )
+    parser.add_argument(
+        '--load_pretrain',
+        action='store_true',
+        help='Whether load pretrain model weights',
         default=False
     )
 
