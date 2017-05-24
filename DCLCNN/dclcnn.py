@@ -1,17 +1,6 @@
 import re
 import tensorflow as tf
 
-from keras.models import Model, Sequential
-from keras.layers.convolutional import Conv1D
-from keras.layers.embeddings import Embedding
-from keras.layers import Input, Dense, Dropout, Lambda
-from keras.layers.normalization import BatchNormalization
-from keras.layers import Activation
-from keras.layers.pooling import MaxPooling1D
-from keras.optimizers import SGD
-
-from utils import get_conv_shape
-
 
 class DCLCNN(object):
     """
@@ -167,70 +156,3 @@ class DCLCNN(object):
             self.acc_summary = tf.summary.scalar("accuracy", accuracy)
 
             return accuracy
-
-
-class ConvBlockLayer(object):
-    """
-    two layer ConvNet. Apply batch_norm and relu after each layer
-    """
-
-    def __init__(self, input_shape, num_filters):
-        self.model = Sequential()
-        # first conv layer
-        self.model.add(Conv1D(filters=num_filters, kernel_size=3, strides=1, padding="same", input_shape=input_shape))
-        self.model.add(BatchNormalization())
-        self.model.add(Activation('relu'))
-
-        # second conv layer
-        self.model.add(Conv1D(filters=num_filters, kernel_size=3, strides=1, padding="same"))
-        self.model.add(BatchNormalization())
-        self.model.add(Activation('relu'))
-
-    def __call__(self, inputs):
-        return self.model(inputs)
-
-
-class DCLCNN2(object):
-
-    def __init__(self, num_filters, num_classes, sequence_max_length=512, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=3):
-        self.num_filters = num_filters
-        self.num_classes = num_classes
-        self.sequence_max_length = sequence_max_length
-        self.num_quantized_chars = num_quantized_chars
-        self.embedding_size = embedding_size
-        self.learning_rate = learning_rate
-        self.top_k = top_k
-
-    def build_model(self):
-        inputs = Input(shape=(self.sequence_max_length, ), dtype='int32', name='inputs')
-        embedded_sent = Embedding(self.num_quantized_chars, self.embedding_size, input_length=self.sequence_max_length)(inputs)
-
-        # First conv layer
-        conv = Conv1D(filters=64, kernel_size=3, strides=2, padding="same")(embedded_sent)
-
-        # Each ConvBlock with one MaxPooling Layer
-        for i in range(len(self.num_filters)):
-            conv = ConvBlockLayer(get_conv_shape(conv), self.num_filters[i])(conv)
-            conv = MaxPooling1D(pool_size=3, strides=2, padding="same")(conv)
-
-        # k-max pooling (Finds values and indices of the k largest entries for the last dimension)
-        def _top_k(x):
-            x = tf.transpose(x, [0, 2, 1])
-            k_max = tf.nn.top_k(x, k=self.top_k)
-            return tf.reshape(k_max[0], (-1, self.num_filters[-1] * self.top_k))
-        k_max = Lambda(_top_k, output_shape=(self.num_filters[-1] * self.top_k,))(conv)
-
-        # 3 fully-connected layer
-        fc1 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(k_max))
-
-        fc2 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(fc1))
-
-        fc3 = Dense(self.num_classes, activation='softmax')(fc2)
-
-        # define optimizer
-        sgd = SGD(lr=self.learning_rate, decay=1e-6, momentum=0.9, nesterov=False)
-
-        self.model = Model(input=inputs, output=fc3)
-        self.model.compile(optimizer=sgd, loss='mean_squared_error', metrics=['accuracy'])
-
-        return self.model

@@ -5,15 +5,86 @@ import sys
 import argparse
 import datetime
 from six.moves import xrange  # pylint: disable=redefined-builtin
-from utils import *
+from utils import to_categorical, get_conv_shape
 from input_handler import get_input_data_from_csv, batch_generator, get_input_data_from_text
-from dclcnn import DCLCNN, DCLCNN2
+from dclcnn import DCLCNN
+from Layers import ConvBlockLayer
 
+from keras.models import Model
+from keras.layers.convolutional import Conv1D
+from keras.layers.embeddings import Embedding
+from keras.layers import Input, Dense, Dropout, Lambda
+from keras.layers.pooling import MaxPooling1D
+from keras.optimizers import SGD
 from keras.callbacks import ModelCheckpoint
+
 
 tf.logging.set_verbosity(tf.logging.INFO)
 # Basic model parameters as external flags.
 FLAGS = None
+
+
+def build_model(num_filters, num_classes, sequence_max_length=512, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=3):
+    inputs = Input(shape=(sequence_max_length, ), dtype='int32', name='inputs')
+    embedded_sent = Embedding(num_quantized_chars, embedding_size, input_length=sequence_max_length)(inputs)
+
+    # First conv layer
+    conv = Conv1D(filters=64, kernel_size=3, strides=2, padding="same")(embedded_sent)
+
+    # Each ConvBlock with one MaxPooling Layer
+    for i in range(len(num_filters)):
+        conv = ConvBlockLayer(get_conv_shape(conv), num_filters[i])(conv)
+        conv = MaxPooling1D(pool_size=3, strides=2, padding="same")(conv)
+
+    # k-max pooling (Finds values and indices of the k largest entries for the last dimension)
+    def _top_k(x):
+        x = tf.transpose(x, [0, 2, 1])
+        k_max = tf.nn.top_k(x, k=top_k)
+        return tf.reshape(k_max[0], (-1, num_filters[-1] * top_k))
+    k_max = Lambda(_top_k, output_shape=(num_filters[-1] * top_k,))(conv)
+
+    # 3 fully-connected layer with dropout regularization
+    fc1 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(k_max))
+    fc2 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(fc1))
+    fc3 = Dense(num_classes, activation='softmax')(fc2)
+
+    # define optimizer
+    sgd = SGD(lr=learning_rate, decay=1e-6, momentum=0.9, nesterov=False)
+
+    model = Model(inputs=inputs, outputs=fc3)
+    model.compile(optimizer=sgd, loss='mean_squared_error', metrics=['accuracy'])
+
+    if FLAGS.load_model is not None:
+        model.load_weights(FLAGS.load_model)
+
+    return model
+
+
+def train_sentiment(input_file, max_feature_length, n_class, embedding_size, learning_rate, batch_size, num_epochs, save_dir=None):
+    # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
+    X_train, y_train_sentiment, _ = get_input_data_from_csv(input_file, max_feature_length)
+    y_train_sentiment = to_categorical(y_train_sentiment, n_class)
+
+    # Stage 2: Build Model
+    num_filters = [64, 128, 256, 512]
+    # dclcnn = DCLCNN2(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate)
+
+    model = build_model(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate)
+
+    # Stage 3: Training
+    save_dir = save_dir if save_dir is not None else 'checkpoints'
+    filepath = os.path.join(save_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    model.fit(
+        x=X_train,
+        y=y_train_sentiment,
+        batch_size=batch_size,
+        epochs=num_epochs,
+        validation_split=0.33,
+        callbacks=[checkpoint],
+        shuffle=True,
+        verbose=True
+    )
 
 
 def train(input_file, max_feature_length):
@@ -90,36 +161,6 @@ def do_eval(eval_data, sess, model, summary_op, summary_writer):
     print("Average accuracy = %.4f" % avg_acc)
     print("Average loss = %.4f " % avg_loss)
     print("---------------\n")
-
-
-def train_sentiment(input_file, max_feature_length, n_class, embedding_size, learning_rate, batch_size, num_epochs, save_dir=None):
-    # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
-    X_train, y_train_sentiment, _ = get_input_data_from_csv(input_file, max_feature_length)
-    y_train_sentiment = to_categorical(y_train_sentiment, n_class)
-
-    # Stage 2: Build Model
-    num_filters = [64, 128, 256, 512]
-    dclcnn = DCLCNN2(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate, top_k=4)
-
-    model = dclcnn.build_model()
-
-    if FLAGS.load_model is not None:
-        model.load_weights(FLAGS.load_model)
-
-    # Stage 3: Training
-    save_dir = save_dir if save_dir is not None else 'checkpoints'
-    filepath = os.path.join(save_dir, "weights.hdf5")
-    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-    model.fit(
-        x=X_train,
-        y=y_train_sentiment,
-        batch_size=batch_size,
-        epochs=num_epochs,
-        validation_split=0.33,
-        # callbacks=[checkpoint],
-        shuffle=True,
-        verbose=True
-    )
 
 
 def _train_sentiment(X_train, y_train, eval_data):
