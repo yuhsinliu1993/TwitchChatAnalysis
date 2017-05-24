@@ -350,13 +350,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input_data',
         type=str,
-        default='/Users/Michaeliu/Twitch/streamer/thijs/output/train.csv',
+        default='./data/train.csv',
         help='Location store the input data (only accept `csv` format)'  # [TODO: to support more data formats]
     )
     parser.add_argument(
         '--test_data',
         type=str,
-        default='/Users/Michaeliu/Twitch/DCLCNN/test.txt',
+        default='./data/test.txt',
         help='Specify test data path'
     )
     parser.add_argument(
