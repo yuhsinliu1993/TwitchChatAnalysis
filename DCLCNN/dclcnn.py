@@ -205,46 +205,30 @@ class DCLCNN2(object):
         inputs = Input(shape=(self.sequence_max_length, ), dtype='int32', name='inputs')
         embedded_sent = Embedding(self.num_quantized_chars, self.embedding_size, input_length=self.sequence_max_length)(inputs)
 
-        # Conv-Layer 0
+        # First conv layer
         conv = Conv1D(filters=64, kernel_size=3, strides=2, padding="same")(embedded_sent)
 
+        # Each ConvBlock with one MaxPooling Layer
         for i in range(len(self.num_filters)):
             conv = ConvBlockLayer(get_conv_shape(conv), self.num_filters[i])(conv)
             conv = MaxPooling1D(pool_size=3, strides=2, padding="same")(conv)
-
-        # # Conv-Blocks 1
-        # self.conv1 = ConvBlockLayer(get_conv_shape(self.conv0), self.num_filters[0])(self.conv0)
-        # self.pool1 = MaxPooling1D(pool_size=3, strides=2, padding="same")(self.conv1)  # strides=2 will halve the input
-
-        # # Conv-Blocks 2
-        # self.conv2 = ConvBlockLayer(get_conv_shape(self.pool1), self.num_filters[1])(self.pool1)
-        # self.pool2 = MaxPooling1D(pool_size=3, strides=2, padding="same")(self.conv2)
-
-        # # Conv-Blocks 3
-        # self.conv3 = ConvBlockLayer(get_conv_shape(self.pool2), self.num_filters[2])(self.pool2)
-        # self.pool3 = MaxPooling1D(pool_size=3, strides=2, padding="same")(self.conv3)
-
-        # # Conv-Blocks 4
-        # self.conv4 = ConvBlockLayer(get_conv_shape(self.pool3), self.num_filters[3])(self.pool3)
-        # self.pool4 = MaxPooling1D(pool_size=3, strides=2, padding="same")(self.conv4)
 
         # k-max pooling (Finds values and indices of the k largest entries for the last dimension)
         def _top_k(x):
             x = tf.transpose(x, [0, 2, 1])
             k_max = tf.nn.top_k(x, k=self.top_k)
             return tf.reshape(k_max[0], (-1, self.num_filters[-1] * self.top_k))
+        k_max = Lambda(_top_k, output_shape=(self.num_filters[-1] * self.top_k,))(conv)
 
-        k_max = Lambda(_top_k, output_shape=(self.num_filters[-1] * self.top_k, ))(conv)
-
-        # fully-connected layer
+        # 3 fully-connected layer
         fc1 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(k_max))
 
         fc2 = Dropout(0.2)(Dense(512, activation='relu', kernel_initializer='he_normal')(fc1))
 
         fc3 = Dense(self.num_classes, activation='softmax')(fc2)
 
-        # Define optimizer
-        sgd = SGD(lr=self.learning_rate, decay=1e-6, momentum=0.9, nesterov=True)
+        # define optimizer
+        sgd = SGD(lr=self.learning_rate, decay=1e-6, momentum=0.9, nesterov=False)
 
         self.model = Model(input=inputs, output=fc3)
         self.model.compile(optimizer=sgd, loss='mean_squared_error', metrics=['accuracy'])

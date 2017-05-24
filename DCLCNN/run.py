@@ -98,7 +98,7 @@ def train_sentiment(input_file, max_feature_length, n_class, embedding_size, lea
     y_train_sentiment = to_categorical(y_train_sentiment, n_class)
 
     # Stage 2: Build Model
-    num_filters = [64, 128, 256]
+    num_filters = [64, 128, 256, 512]
     dclcnn = DCLCNN2(num_filters=num_filters, num_classes=n_class, embedding_size=embedding_size, learning_rate=learning_rate, top_k=4)
 
     model = dclcnn.build_model()
