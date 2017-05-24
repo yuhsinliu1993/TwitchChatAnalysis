@@ -24,7 +24,7 @@ FLAGS = None
 num_filters = [16, 32, 64, 128]
 
 
-def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=2, load_pretrained_model=False):
+def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized_chars=71, embedding_size=16, learning_rate=0.001, top_k=2, load_pretrained_model=False, ckpt_dir=None):
     inputs = Input(shape=(sequence_max_length, ), dtype='int32', name='inputs')
     embedded_sent = Embedding(num_quantized_chars, embedding_size, input_length=sequence_max_length)(inputs)
 
@@ -50,43 +50,75 @@ def build_model(num_filters, num_classes, sequence_max_length=128, num_quantized
 
     # define optimizer
     sgd = SGD(lr=learning_rate, decay=1e-6, momentum=0.9, nesterov=False)
-
     model = Model(inputs=inputs, outputs=fc3)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     if load_pretrained_model:
-        if FLAGS.load_model is None:
-            model.load_weights(find_newest_checkpoint(FLAGS.checkpoint_dir))
-        else:
-            model.load_weights(FLAGS.load_model)
+        load_model = find_newest_checkpoint(ckpt_dir) if FLAGS.load_model is None else FLAGS.load_model
+        model.load_weights(load_model)
+        tf.logging.info('Loading checkpoint %s', load_model)
 
     return model
 
 
-def train_sentiment(input_file, max_feature_length, n_class, embedding_size, learning_rate, batch_size, num_epochs, save_dir=None, print_summary=False):
+def train_sentiment(input_file, max_feature_length, num_classes, embedding_size, learning_rate, batch_size, num_epochs, ckpt_dir=None, print_summary=False):
     # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
     X_train, y_train_sentiment, _ = get_input_data_from_csv(input_file, max_feature_length)
-    y_train_sentiment = to_categorical(y_train_sentiment, n_class)
+    y_train_sentiment = to_categorical(y_train_sentiment, num_classes)
 
-    # Stage 2: Build Model
-    model = build_model(num_filters=num_filters, num_classes=n_class, sequence_max_length=FLAGS.max_feature_length, embedding_size=embedding_size, learning_rate=learning_rate, load_pretrained_model=FLAGS.load_pretrain)
-
-    # Stage 3: Training
-    save_dir = save_dir if save_dir is not None else 'checkpoints'
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    filepath = os.path.join(save_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
+    # Stage 2: Checkpoints setting
+    ckpt_dir = os.path.join(ckpt_dir, 'sentiment') if ckpt_dir is not None else os.path.join('checkpoints', 'sentiment')
+    print("[*] Save weights to %s" % ckpt_dir)
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+    filepath = os.path.join(ckpt_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=False, mode='max')
+
+    # Stage 3: Build Model
+    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=embedding_size, learning_rate=learning_rate, load_pretrained_model=FLAGS.load_pretrain, ckpt_dir=ckpt_dir)
 
     if print_summary:
         print(model.summary())
 
+    # Stage 4: Train
     model.fit(
         x=X_train,
         y=y_train_sentiment,
         batch_size=batch_size,
         epochs=num_epochs,
         validation_split=0.33,
+        callbacks=[checkpoint],
+        shuffle=True,
+        verbose=FLAGS.verbose
+    )
+
+
+def train_content(input_file, max_feature_length, num_classes, embedding_size, learning_rate, batch_size, num_epochs, ckpt_dir=None, print_summary=False):
+    # Stage 1: Convert raw texts into char-ids format && convert labels into one-hot vectors
+    X_train, _, y_train_content = get_input_data_from_csv(input_file, max_feature_length)
+    y_train_content = to_categorical(y_train_content, num_classes)
+
+    # Stage 2: Checkpoints setting
+    ckpt_dir = os.path.join(ckpt_dir, 'content') if ckpt_dir is not None else os.path.join('checkpoints', 'content')
+    print("[*] Save weights to %s" % ckpt_dir)
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+    filepath = os.path.join(ckpt_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=False, mode='max')
+
+    # Stage 3: Build Model
+    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=embedding_size, learning_rate=learning_rate, load_pretrained_model=FLAGS.load_pretrain, ckpt_dir=ckpt_dir)
+
+    if print_summary:
+        print(model.summary())
+
+    # Stage 4: Train
+    model.fit(
+        x=X_train,
+        y=y_train_content,
+        batch_size=batch_size,
+        epochs=num_epochs,
+        validation_split=0.2,
         callbacks=[checkpoint],
         shuffle=True,
         verbose=FLAGS.verbose
@@ -100,23 +132,23 @@ def do_evaluation(eval_data, max_feature_length):
     # Load Testing Data
     comments = []
     sentiments = []
-    comment_classes = []
+    contents = []
 
     with open(eval_data, 'r') as f:
         for line in f.readlines():
-            comment, sentiment, _class = line.split(',')
+            comment, sentiment, content = line.split(',')
             comments.append(comment)
             sentiments.append(sentiment)
-            comment_classes.append(_class)
+            contents.append(content)
 
     for i in xrange(len(comments)):
-        X, y_sentiment, y_comment = get_input_data_from_text(comments[i], sentiments[i], comment_classes[i], max_feature_length)
+        X, y_sentiment, y_comment = get_input_data_from_text(comments[i], sentiments[i], contents[i], max_feature_length)
         y_sentiment = to_categorical(y_sentiment, FLAGS.n_sentiment_classes)
-        y_comment = to_categorical(y_comment, FLAGS.n_comment_classes)
+        y_comment = to_categorical(y_comment, FLAGS.n_content_classes)
 
         sentiment_model = build_model(num_filters=num_filters, num_classes=FLAGS.n_sentiment_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
 
-        comment_model = build_model(num_filters=num_filters, num_classes=FLAGS.n_comment_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
+        comment_model = build_model(num_filters=num_filters, num_classes=FLAGS.n_content_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
 
         sentiment_loss_and_history = sentiment_model.evaluate(X, y_sentiment, batch_size=FLAGS.batch_size, verbose=1)
         comment_loss_and_history = comment_model.evaluate(X, y_sentiment, batch_size=FLAGS.batch_size, verbose=1)
@@ -124,30 +156,68 @@ def do_evaluation(eval_data, max_feature_length):
         # print("[*] ACCURACY OF TEST DATA: %.4f" % accuracy)
 
 
-def do_sentiment_prediction(test_data, num_classes, max_feature_length):
-    if FLAGS.load_model is None:
-        raise ValueError("You need to specify the model location by --load_model=[location]")
+def do_sentiment_prediction(test_data, num_classes, max_feature_length, ckpt_dir=None):
 
     # Load Testing Data
     comments = []
+    comments_ids = []
     with open(test_data, 'r') as f:
         for comment in f.readlines():
-            comments.append(get_comment_ids(comment, max_feature_length))
+            comment = comment.strip('\n')
+            comment = comment.strip('\r')
+            comments.append(comment)
+            comments_ids.append(get_comment_ids(comment, max_feature_length))
 
-    X = np.asarray(comments, dtype='int32')
-    print X.shape
-    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True)
+    X = np.asarray(comments_ids, dtype='int32')
+    ckpt_dir = os.path.join(ckpt_dir, 'sentiment') if ckpt_dir is not None else os.path.join('checkpoints', 'sentiment')
 
-    predictions = model.predict(X, batch_size=FLAGS.batch_size, verbose=1)
+    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True, ckpt_dir=ckpt_dir)
+
+    predictions = model.predict(X, batch_size=FLAGS.batch_size, verbose=0)
+    predictions = np.argmax(predictions, axis=1) - 1
+
+    return comments, predictions
+
+
+def do_content_prediction(test_data, num_classes, max_feature_length, ckpt_dir=None):
+
+    # Load Testing Data
+    comments = []
+    comments_ids = []
+    with open(test_data, 'r') as f:
+        for comment in f.readlines():
+            comment = comment.strip('\n')
+            comment = comment.strip('\r')
+            comments.append(comment)
+            comments_ids.append(get_comment_ids(comment, max_feature_length))
+
+    X = np.asarray(comments_ids, dtype='int32')
+    ckpt_dir = os.path.join(ckpt_dir, 'content') if ckpt_dir is not None else os.path.join('checkpoints', 'content')
+
+    model = build_model(num_filters=num_filters, num_classes=num_classes, sequence_max_length=FLAGS.max_feature_length, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, load_pretrained_model=True, ckpt_dir=ckpt_dir)
+
+    predictions = model.predict(X, batch_size=FLAGS.batch_size, verbose=0)
+    predictions = np.argmax(predictions, axis=1)
+
+    return predictions
 
 
 def run(_):
     if FLAGS.mode == 'train':
-        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, n_class=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, save_dir=FLAGS.checkpoint_dir, print_summary=FLAGS.print_summary)
+        train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, ckpt_dir=FLAGS.checkpoint_dir, print_summary=FLAGS.print_summary)
+        train_content(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, num_classes=FLAGS.n_content_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, ckpt_dir=FLAGS.checkpoint_dir, print_summary=False)
     elif FLAGS.mode == 'eval':
         do_evaluation(FLAGS.test_data, FLAGS.max_feature_length)
     elif FLAGS.mode == 'pred':
-        do_sentiment_prediction(FLAGS.test_data, FLAGS.n_sentiment_classes, FLAGS.max_feature_length)
+        comments, sent_pred = do_sentiment_prediction(FLAGS.test_data, FLAGS.n_sentiment_classes, FLAGS.max_feature_length, FLAGS.checkpoint_dir)
+        cont_pred = do_content_prediction(FLAGS.test_data, FLAGS.n_content_classes, FLAGS.max_feature_length, FLAGS.checkpoint_dir)
+
+        for i in range(len(comments)):
+            print("===========================")
+            print("Comment %d: %s" % ((i + 1), comments[i]))
+            print("Sentiment prediction: {}".format(sent_pred[i]))
+            print("Content prediction: {}".format(cont_pred[i]))
+            print("===========================\n")
     else:
         pass
 
@@ -161,7 +231,7 @@ if __name__ == '__main__':
         help='Specify number of classes of sentiments'
     )
     parser.add_argument(
-        '--n_comment_classes',
+        '--n_content_classes',
         type=int,
         default=10,
         help='Specify number of classes of comments'

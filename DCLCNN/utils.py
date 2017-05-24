@@ -49,5 +49,10 @@ def get_conv_shape(conv):
 
 def find_newest_checkpoint(checkpoint_dir):
     files_path = os.path.join(checkpoint_dir, '*')
+
     files = sorted(glob.iglob(files_path), key=os.path.getctime, reverse=True)
-    return files[0]
+
+    if files[0] is not None:
+        return files[0]
+    else:
+        raise ValueError("You need to specify the model location by --load_model=[location]")

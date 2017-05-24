@@ -36,7 +36,7 @@ def batch_generator(X, y, batch_size, num_epochs, shuffle=True):
 
 def get_input_data_from_csv(file_path, max_feature_length):
     comments = []
-    classes = []
+    contents = []
     sentiments = []
     with open(file_path) as f:
         reader = csv.DictReader(f, fieldnames=['id', 'comments', 'sentiment', 'class'])
@@ -44,9 +44,9 @@ def get_input_data_from_csv(file_path, max_feature_length):
             if i > 0:
                 comments.append(get_comment_ids(row['comments'], max_feature_length))
                 sentiments.append(int(row['sentiment']) + 1)
-                classes.append(int(row['class']))
+                contents.append(int(row['class']))
 
-    return np.asarray(comments, dtype='int32'), np.asarray(sentiments, dtype='int32'), np.asarray(classes, dtype='int32')
+    return np.asarray(comments, dtype='int32'), np.asarray(sentiments, dtype='int32'), np.asarray(contents, dtype='int32')
 
 
 def get_input_data_from_text(text, sentiment_class, comment_class, max_feature_length):
