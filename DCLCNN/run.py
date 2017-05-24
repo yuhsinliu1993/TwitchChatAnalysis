@@ -75,6 +75,10 @@ def train_sentiment(input_file, max_feature_length, n_class, embedding_size, lea
     save_dir = save_dir if save_dir is not None else 'checkpoints'
     filepath = os.path.join(save_dir, "weights-{epoch:02d}-{val_acc:.2f}.hdf5")
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+
+    if FLAGS.verbose:
+        print(model.summary())
+
     model.fit(
         x=X_train,
         y=y_train_sentiment,
@@ -83,7 +87,7 @@ def train_sentiment(input_file, max_feature_length, n_class, embedding_size, lea
         validation_split=0.33,
         callbacks=[checkpoint],
         shuffle=True,
-        verbose=True
+        verbose=FLAGS.verbose
     )
 
 
@@ -452,6 +456,12 @@ if __name__ == '__main__':
         '--load_model',
         type=str,
         help='Specify the location of model weights',
+    )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Verbose on training',
+        default=False
     )
 
     FLAGS, unparsed = parser.parse_known_args()
