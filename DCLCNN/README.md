@@ -29,7 +29,7 @@ To train a model
 
 To predic a model
 
-    $ python run2.py --mode=pred --checkpoint_dir=checkpoints
+    $ python run.py --mode=pred --checkpoint_dir=checkpoints
 
 
 All options:
