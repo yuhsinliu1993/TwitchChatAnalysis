@@ -1,5 +1,23 @@
 # Deep Character-Level Convolutional Neural Network For Text Classification #
 
+Reference
+---------
+
+1. [Convolutional Neural Networks for Sentence Classification](https://arxiv.org/abs/1408.5882) proposed by Yoon Kim in 2014
+
+2. [Character-level Convolutional Networks for Text Classification](https://arxiv.org/abs/1509.01626) proposed by Xiang Zhang, Junbo Zhao, Yann LeCun in 2015
+
+3. [VERY DEEP CONVOLUTIONAL NETWORKS FOR LARGE-SCALE IMAGE RECOGNITION](https://arxiv.org/abs/1409.1556) proposed by Karen Simonyan and Andrew Zisserman in 2014
+
+
+
+Prerequisites
+-------------
+
+- python 2.7
+- numpy
+- [Tensorflow](https://www.tensorflow.org/)
+- [Keras](https://github.com/fchollet/keras)
 
 
 Usage
@@ -7,22 +25,27 @@ Usage
 
 To train a model
 
-    $ python
+    $ python run.py --mode=train --num_epochs=1000 --learning_rate=0.0001 --verbose --checkpoint_dir=checkpoints --tensorboard
+
+To predic a model
+
+    $ python run2.py --mode=pred --checkpoint_dir=checkpoints
+
 
 ```
-usage: run2.py [-h] [--n_sentiment_classes N_SENTIMENT_CLASSES]
-               [--n_content_classes N_CONTENT_CLASSES]
-               [--num_epochs NUM_EPOCHS] [--batch_size BATCH_SIZE]
-               [--learning_rate LEARNING_RATE] [--optimizer OPTIMIZER]
-               [--input_data INPUT_DATA] [--test_data TEST_DATA]
-               [--checkpoint_dir CHECKPOINT_DIR] [--output_dir OUTPUT_DIR]
-               [--streamer STREAMER] [--embedding_size EMBEDDING_SIZE]
-               [--max_feature_length MAX_FEATURE_LENGTH]
-               [--evaluate_every EVALUATE_EVERY]
-               [--checkpoint_every CHECKPOINT_EVERY]
-               [--l2_weight_decay L2_WEIGHT_DECAY] --mode MODE
-               [--load_model LOAD_MODEL] [--verbose] [--print_summary]
-               [--load_pretrain] [--tensorboard]
+usage: run.py [-h] [--n_sentiment_classes N_SENTIMENT_CLASSES]
+              [--n_content_classes N_CONTENT_CLASSES]
+              [--num_epochs NUM_EPOCHS] [--batch_size BATCH_SIZE]
+              [--learning_rate LEARNING_RATE] [--optimizer OPTIMIZER]
+              [--input_data INPUT_DATA] [--test_data TEST_DATA]
+              [--checkpoint_dir CHECKPOINT_DIR] [--output_dir OUTPUT_DIR]
+              [--streamer STREAMER] [--embedding_size EMBEDDING_SIZE]
+              [--max_feature_length MAX_FEATURE_LENGTH]
+              [--evaluate_every EVALUATE_EVERY]
+              [--checkpoint_every CHECKPOINT_EVERY]
+              [--l2_weight_decay L2_WEIGHT_DECAY] --mode MODE
+              [--load_model LOAD_MODEL] [--verbose] [--print_summary]
+              [--load_pretrain] [--tensorboard]
 
 optional arguments:
   -h, --help            show this help message and exit
