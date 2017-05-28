@@ -32,6 +32,7 @@ To predic a model
     $ python run2.py --mode=pred --checkpoint_dir=checkpoints
 
 
+All options:
 ```
 usage: run.py [-h] [--n_sentiment_classes N_SENTIMENT_CLASSES]
               [--n_content_classes N_CONTENT_CLASSES]
