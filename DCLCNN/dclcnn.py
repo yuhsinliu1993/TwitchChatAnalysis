@@ -50,8 +50,6 @@ class DCLCNN(object):
                 self.grad_summaries.append(sparsity_summary)
 
     def _build_model(self):
-
-        self.dropout_keep_prob = Input(shape=(1, ), dtype='int32', name='dropout_keep_prob')
         self.X_input = tf.placeholder(tf.int32, [None, self.sequence_max_length], name="X_input")  # # X_input: must be converted into "ids"
         self.y_input = tf.placeholder(tf.float32, [None, self.num_classes], name="y_input")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
@@ -125,7 +123,6 @@ class DCLCNN(object):
             filter_1 = tf.get_variable('filter1', filter_shape, initializer=tf.random_normal_initializer(stddev=0.05))
             conv = tf.nn.conv2d(input_tensor, filter=filter_1, strides=strides, padding="SAME")
             conv = tf.layers.batch_normalization(conv, name="%s_BN" % scope)
-            # conv = tflearn.layers.normalization.batch_normalization(conv, scope="%s_BN" % scope)
 
             return conv
 

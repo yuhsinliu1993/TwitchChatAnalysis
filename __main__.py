@@ -21,7 +21,7 @@ def main(**kwargs):
 
     from ChatLogParser import TwitchChatParser
     from DictionaryTagger import DictionaryTagger
-    from SentimentAnalysis import SentimentAnalyzer
+    # from SentimentAnalysis import SentimentAnalyzer
     from BitermTopicModeling import BTM
     from subprocess import call
 
