@@ -1,5 +1,9 @@
 # Deep Character-Level Convolutional Neural Network For Text Classification #
 
+### Framework
+
+![](assest/DCLCNN.png)
+
 Reference
 ---------
 
