@@ -2,7 +2,6 @@ import os
 import re
 import json
 import operator
-import pandas as pd
 import tensorflow as tf
 # from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer

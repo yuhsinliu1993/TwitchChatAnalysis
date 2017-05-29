@@ -4,7 +4,7 @@ import argparse
 import tensorflow as tf
 import numpy as np
 
-from utils import to_categorical, get_conv_shape, get_comment_ids, find_newest_checkpoint
+from utils import to_categorical, get_conv_shape, get_comment_ids, find_newest_checkpoint, get_streamer_emote, fetch_twitch_emotes, get_cleaned_text
 from input_handler import get_input_data_from_csv, get_input_data_from_text
 
 from Layers import ConvBlockLayer
@@ -195,8 +195,7 @@ def do_sentiment_prediction(test_data, num_classes, max_feature_length, ckpt_dir
     comments_ids = []
     with open(test_data, 'r') as f:
         for comment in f.readlines():
-            comment = comment.strip('\n')
-            comment = comment.strip('\r')
+            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=True, digit_to_string=False)
             comments.append(comment)
             comments_ids.append(get_comment_ids(comment, max_feature_length))
 
@@ -218,8 +217,7 @@ def do_content_prediction(test_data, num_classes, max_feature_length, ckpt_dir=N
     comments_ids = []
     with open(test_data, 'r') as f:
         for comment in f.readlines():
-            comment = comment.strip('\n')
-            comment = comment.strip('\r')
+            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=True, digit_to_string=False)
             comments.append(comment)
             comments_ids.append(get_comment_ids(comment, max_feature_length))
 
@@ -235,12 +233,19 @@ def do_content_prediction(test_data, num_classes, max_feature_length, ckpt_dir=N
 
 
 def run(_):
+    global emotes
+
+    streamer_emotes = get_streamer_emote(FLAGS.streamer)
+    twitch_emotes = fetch_twitch_emotes(twitch_emote_dir='../TwitchEmotesPics')
+    emotes = streamer_emotes + twitch_emotes
+
     if FLAGS.mode == 'train':
         train_sentiment(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, num_classes=FLAGS.n_sentiment_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, ckpt_dir=FLAGS.checkpoint_dir, print_summary=FLAGS.print_summary)
         train_content(input_file=FLAGS.input_data, max_feature_length=FLAGS.max_feature_length, num_classes=FLAGS.n_content_classes, embedding_size=FLAGS.embedding_size, learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_epochs=FLAGS.num_epochs, ckpt_dir=FLAGS.checkpoint_dir, print_summary=False)
     elif FLAGS.mode == 'eval':
         do_evaluation(FLAGS.test_data, FLAGS.max_feature_length)
     elif FLAGS.mode == 'pred':
+
         comments, sent_pred = do_sentiment_prediction(FLAGS.test_data, FLAGS.n_sentiment_classes, FLAGS.max_feature_length, FLAGS.checkpoint_dir)
         cont_pred = do_content_prediction(FLAGS.test_data, FLAGS.n_content_classes, FLAGS.max_feature_length, FLAGS.checkpoint_dir)
 
@@ -319,7 +324,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--streamer',
         type=str,
-        default='thijs',
+        default='thijshs',
         help='Specify a twitch streamer'
     )
     parser.add_argument(
