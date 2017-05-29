@@ -195,8 +195,8 @@ def do_sentiment_prediction(test_data, num_classes, max_feature_length, ckpt_dir
     comments_ids = []
     with open(test_data, 'r') as f:
         for comment in f.readlines():
-            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=True, digit_to_string=False)
             comments.append(comment)
+            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=False, digit_to_string=False)
             comments_ids.append(get_comment_ids(comment, max_feature_length))
 
     X = np.asarray(comments_ids, dtype='int32')
@@ -217,8 +217,8 @@ def do_content_prediction(test_data, num_classes, max_feature_length, ckpt_dir=N
     comments_ids = []
     with open(test_data, 'r') as f:
         for comment in f.readlines():
-            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=True, digit_to_string=False)
             comments.append(comment)
+            comment = get_cleaned_text(comment, emotes, remove_stopwords=True, streamer=FLAGS.streamer, remove_emotes_or_words=False, digit_to_string=False)
             comments_ids.append(get_comment_ids(comment, max_feature_length))
 
     X = np.asarray(comments_ids, dtype='int32')

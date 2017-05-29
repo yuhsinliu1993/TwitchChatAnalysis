@@ -190,7 +190,7 @@ def get_cleaned_text(text, emotes, streamer=None, remove_stopwords=False, stem_w
         text = _remove_emotes_or_words(text, emotes)
 
     # Return a list of words
-    return text
+    return text.strip()
 
 
 def get_streamer_emote(streamer=None):
