@@ -4,8 +4,12 @@
 
 ![](assest/DCLCNN.png)
 
-Reference
----------
+### Summary
+
+![](assest/summary.png)
+
+References
+----------
 
 1. [Convolutional Neural Networks for Sentence Classification](https://arxiv.org/abs/1408.5882) proposed by Yoon Kim in 2014
 
