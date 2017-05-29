@@ -1,13 +1,5 @@
 # Deep Character-Level Convolutional Neural Network For Text Classification #
 
-### Framework
-
-![](assest/DCLCNN.png)
-
-### Summary
-
-![](assest/summary.png)
-
 References
 ----------
 
@@ -17,6 +9,15 @@ References
 
 3. [VERY DEEP CONVOLUTIONAL NETWORKS FOR LARGE-SCALE IMAGE RECOGNITION](https://arxiv.org/abs/1409.1556) proposed by Karen Simonyan and Andrew Zisserman in 2014
 
+Framework
+---------
+
+![](assest/DCLCNN.png | width=250)
+
+Summary
+-------
+
+![](assest/summary.png)
 
 
 Prerequisites
