@@ -12,7 +12,7 @@ References
 Framework
 ---------
 
-![](assest/DCLCNN.png | width=250)
+![](assest/DCLCNN.png)
 
 Summary
 -------
