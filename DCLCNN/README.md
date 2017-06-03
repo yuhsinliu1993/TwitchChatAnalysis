@@ -12,12 +12,12 @@ References
 Framework
 ---------
 
-![](assest/DCLCNN.png)
+![](assests/DCLCNN.png)
 
 Summary
 -------
 
-![](assest/summary.png)
+![](assests/summary.png)
 
 
 Prerequisites
